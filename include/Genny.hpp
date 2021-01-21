@@ -56,21 +56,11 @@ public:
     Object(std::string_view name) : m_name{name}, m_object_class{this} {}
     virtual ~Object() = default;
 
-    const auto& get_name() const { return m_name; }
+    const auto& name() const { return m_name; }
 
     virtual void generate(std::ostream& os) const {};
 
-protected:
-    friend class Type;
-
-    Object* m_object_class{};
-    Object* m_parent_class{};
-    Object* m_owner{};
-
-    std::string m_name{};
-    std::vector<std::unique_ptr<Object>> m_children{};
-
-    template <typename T> bool is_a() {
+    template <typename T> bool is_a() const {
         for (auto i = m_object_class; i != nullptr; i = i->m_parent_class) {
             if (i == T::static_class()) {
                 return true;
@@ -80,12 +70,23 @@ protected:
         return false;
     }
 
+protected:
+    friend class Type;
+    friend class Namespace;
+
+    Object* m_object_class{};
+    Object* m_parent_class{};
+    Object* m_owner{};
+
+    std::string m_name{};
+    std::vector<std::unique_ptr<Object>> m_children{};
+
     template <typename T> T* add(std::unique_ptr<T> object) {
         object->m_owner = this;
         return (T*)m_children.emplace_back(std::move(object)).get();
     }
 
-    template <typename T> T* find(std::string_view name) {
+    template <typename T> T* find(std::string_view name) const {
         for (auto&& child : m_children) {
             if (child->is_a<T>() && child->m_name == name) {
                 return (T*)child.get();
@@ -135,9 +136,19 @@ protected:
         return false;
     }
 
+
 private:
     Object() : m_object_class{this} {}
 };
+
+template <typename T> T* cast(const Object* object) {
+    if (object->is_a<T>()) {
+        return (T*)object;
+    }
+
+    return nullptr;
+}
+
 
 #define SDK_OBJECT(T, TParent)                    \
 public:                                           \
