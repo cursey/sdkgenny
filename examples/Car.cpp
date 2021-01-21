@@ -3,8 +3,34 @@
 
 #include <Genny.hpp>
 
+constexpr auto PREAMBLE =
+    R"(MIT License
+
+Copyright (c) 2021 cursey
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.)";
+
 int main(int argc, char* argv[]) {
-    auto g = std::make_unique<genny::Namespace>("");
+    auto g = std::make_unique<genny::HeaderFile>("Car.hpp");
+
+    g->preamble(PREAMBLE)->postamble("End of Car.hpp");
+    g->include("cstdint")->include_local("Types.hpp");
 
     g->type("bool")->size(1);
     g->type("char")->size(1);
@@ -38,9 +64,9 @@ int main(int argc, char* argv[]) {
     car->array_("doors")->count(4)->type(door)->offset(16 + 4 * 4);
     car->member("pos")->type(g->type("Vec3"))->offset(car->array_("doors")->end());
     car->member("pos_history")->type(g->type("Vec3")->ptr())->offset(car->member("pos")->end());
-    
+
     auto drive = car->method("drive");
-    
+
     drive->returns(g->type("float"));
     drive->param("speed")->type(g->type("float"));
     drive->param("distance")->type(g->type("float"));

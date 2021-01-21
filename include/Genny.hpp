@@ -4,8 +4,10 @@
 #include <functional>
 #include <memory>
 #include <ostream>
+#include <set>
 #include <string>
 #include <string_view>
+#include <sstream>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -661,6 +663,15 @@ public:
             os << "namespace " << m_name << " {\n";
         }
 
+        generate_internal(os);
+
+        if (!m_name.empty()) {
+            os << "} // namespace " << m_name << "\n";
+        }
+    }
+
+protected:
+    void generate_internal(std::ostream& os) const {
         for (auto&& child : get_all<Namespace>()) {
             child->generate(os);
             os << "\n";
@@ -696,13 +707,86 @@ public:
             for (auto&& child : get_all<Struct>()) {
                 generate_struct(child);
             }
-
-        }
-
-        if (!m_name.empty()) {
-            os << "} // namespace " << m_name << "\n";
         }
     }
+};
+
+class HeaderFile : public Namespace {
+public:
+    SDK_OBJECT(HeaderFile, Namespace);
+
+    auto preamble(std::string_view preamble) { m_preamble = preamble;
+        return this;
+    }
+    auto postamble(std::string_view postamble) {
+        m_postamble = postamble;
+        return this;
+    }
+
+    auto include(std::string_view header) {
+        m_includes.emplace(header);
+        return this;
+    }
+    auto include_local(std::string_view header) {
+        m_local_includes.emplace(header);
+        return this;
+    }
+    
+    void generate(std::ostream& os) const override { 
+        if (!m_name.empty()) {
+            os << "// " << m_name << "\n\n";
+        }
+
+        if (!m_preamble.empty()) {
+            std::istringstream sstream{m_preamble};
+            std::string line{};
+
+            while (std::getline(sstream, line)) {
+                os << "// " << line << "\n";
+            }
+        }
+
+        os << "\n";
+        os << "#pragma once\n";
+
+        if (!m_includes.empty()) {
+            os << "\n";
+
+            for (auto&& include : m_includes) {
+                os << "#include <" << include << ">\n";
+            }
+        }
+
+        if (!m_local_includes.empty()) {
+            os << "\n";
+
+            for (auto&& include : m_local_includes) {
+                os << "#include \"" << include << "\"\n";
+            }
+        }
+
+        os << "\n";
+        generate_internal(os);
+
+        if (!m_postamble.empty()) {
+            os << "\n";
+
+            std::istringstream sstream{m_postamble};
+            std::string line{};
+
+            while (std::getline(sstream, line)) {
+                os << "// " << line << "\n";
+            }
+        }
+
+        os << "\n";
+    }
+
+private:
+    std::string m_preamble{};
+    std::string m_postamble{};
+    std::set<std::string> m_includes{};
+    std::set<std::string> m_local_includes{};
 };
 
 } // namespace genny
