@@ -589,11 +589,17 @@ protected:
 
         while (offset < max_offset) {
             if (auto search = var_map.find(offset); search != var_map.end()) {
+                auto var = search->second;
+
+                // Skip variables where the user has not given us a valid size (forgot to set a type or the type is unfinished).
+                if (var->size() == 0) {
+                    ++offset;
+                    continue;
+                }
+
                 if (offset - last_offset > 0) {
                     os << "char pad_" << std::hex << last_offset << "[" << std::dec << offset - last_offset << "];\n";
                 }
-
-                auto var = search->second;
 
                 var->generate(os);
 
