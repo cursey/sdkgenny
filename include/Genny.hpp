@@ -598,7 +598,7 @@ protected:
                 }
 
                 if (offset - last_offset > 0) {
-                    os << "char pad_" << std::hex << last_offset << "[" << std::dec << offset - last_offset << "];\n";
+                    os << "char pad_" << std::hex << last_offset << "[0x" << std::hex << offset - last_offset << "];\n";
                 }
 
                 var->generate(os);
@@ -611,7 +611,7 @@ protected:
         }
 
         if (offset - last_offset > 0) {
-            os << "char pad_" << std::hex << last_offset << "[" << std::dec << offset - last_offset << "];\n";
+            os << "char pad_" << std::hex << last_offset << "[0x" << std::hex << offset - last_offset << "];\n";
         }
 
         if (has_any<Function>()) {
