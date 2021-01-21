@@ -510,7 +510,7 @@ public:
         generate_inheritance(os);
         os << " {\n";
         generate_internal(os);
-        os << "};\n";
+        os << "}; // Size: 0x" << std::hex << size() << "\n";
     }
 
 protected:
@@ -641,7 +641,7 @@ public:
         os << " {\n";
         os << "public:\n";
         generate_internal(os);
-        os << "};\n";
+        os << "}; // Size: 0x" << std::hex << size() << "\n";
     }
 };
 
