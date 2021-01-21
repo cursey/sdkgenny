@@ -1,3 +1,4 @@
+#include <cassert>
 #include <iostream>
 
 #include <Genny.hpp>
@@ -55,6 +56,7 @@ int main(int argc, char* argv[]) {
 
     // Name collision will occur. Will have a number appended in the output.
     two_door->member("weight")->type(g->type("long"))->offset(120);
+    assert(two_door->owner<genny::Namespace>() == g.get());
 
     g->generate(std::cout);
 

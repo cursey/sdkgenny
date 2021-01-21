@@ -72,6 +72,17 @@ public:
         return false;
     }
 
+    // Searches for an owner of the correct type.
+    template <typename T> T* owner() {
+        for (auto owner = m_owner; owner != nullptr; owner = owner->m_owner) {
+            if (owner->is_a<T>()) {
+                return (T*)owner;
+            }
+        }
+
+        return nullptr;
+    }
+
 protected:
     friend class Type;
     friend class Namespace;
