@@ -549,7 +549,7 @@ protected:
         }
 
         auto max_offset = size();
-        auto offset = 0;
+        size_t offset = 0;
 
         // Skip over the vtable.
         if (has_any<VirtualFunction>()) {
