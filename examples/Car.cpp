@@ -16,7 +16,7 @@ int main(int argc, char* argv[]) {
 
     g->enum_("CarTypes")->value("TWO_DOOR", 0)->value("FOUR_DOOR", 1)->value("TRUCK", 2)->value("VAN", 3);
 
-    auto vec3 = g->struct_("Vec3");
+    auto vec3 = g->struct_("Vec3")->size(16);
 
     vec3->member("x")->type(g->type("float"))->offset(0);
     vec3->member("y")->type(g->type("float"))->offset(4);

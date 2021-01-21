@@ -474,6 +474,10 @@ public:
 
         return size;
     }
+    auto size(int size) {
+        m_size = size;
+        return this;
+    }
 
     virtual void generate_forward_decl(std::ostream& os) const { os << "struct " << m_name << ";\n"; }
 
@@ -574,6 +578,10 @@ protected:
             } else {
                 ++offset;
             }
+        }
+
+        if (offset - last_offset > 0) {
+            os << "char pad_" << std::hex << last_offset << "[" << std::dec << offset - last_offset << "];\n";
         }
 
         if (has_any<Function>()) {
