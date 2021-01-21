@@ -22,7 +22,7 @@ int main(int argc, char* argv[]) {
     vec3->member("y")->type(g->type("float"))->offset(4);
     vec3->member("z")->type(g->type("float"))->offset(8);
 
-    auto car = g->class_("Car");
+    auto car = g->class_("Car")->parent(g->class_("ModeOfTransportation"));
 
     car->member("weight")->type(g->type("int"))->offset(8);
     car->member("value")->type(g->type("float"))->offset(12);

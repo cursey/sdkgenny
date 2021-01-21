@@ -1,11 +1,13 @@
 #pragma once
 
 #include <cassert>
+#include <functional>
 #include <memory>
 #include <ostream>
 #include <string>
 #include <string_view>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 namespace genny {
@@ -659,10 +661,25 @@ public:
 
             os << "\n";
 
-            for (auto&& child : get_all<Struct>()) {
-                child->generate(os);
+            std::unordered_set<const Struct*> generated_structs{};
+            std::function<void(const Struct*)> generate_struct = [&](const Struct* struct_) {
+                if (generated_structs.find(struct_) != generated_structs.end()) {
+                    return;
+                }
+
+                if (auto parent = struct_->parent()) {
+                    generate_struct(parent);
+                }
+
+                struct_->generate(os);
                 os << "\n";
+                generated_structs.emplace(struct_);
+            };
+
+            for (auto&& child : get_all<Struct>()) {
+                generate_struct(child);
             }
+
         }
 
         if (!m_name.empty()) {
