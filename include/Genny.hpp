@@ -734,12 +734,14 @@ public:
     
     void generate(std::ostream& os) const override { 
         if (!m_name.empty()) {
-            os << "// " << m_name << "\n\n";
+            os << "// " << m_name << "\n";
         }
 
         if (!m_preamble.empty()) {
             std::istringstream sstream{m_preamble};
             std::string line{};
+
+            os << "\n";
 
             while (std::getline(sstream, line)) {
                 os << "// " << line << "\n";

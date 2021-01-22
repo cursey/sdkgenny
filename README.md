@@ -8,17 +8,16 @@ Copy `Genny.hpp` from the `include/` directory into your project and `#include` 
 
 ## Usage
 Here is a short example of how to use SdkGenny. This does not showcase every feature. For more examples check the `examples/` directory.
-
 ```
-// Make the global namespace (empty name).
-auto g = std::make_unique<genny::Namespace>("");
+// Make our SDK's header file.
+auto sdk = std::make_unique<genny::HeaderFile>("Sdk.hpp");
 
 // Add some basic types to the global namespace.
-g->type("int")->size(4);
-g->type("float")->size(4);
+sdk->type("int")->size(4);
+sdk->type("float")->size(4);
 
 // Make an actual namespace.
-auto ns = g->namespace_("foobar");
+auto ns = sdk->namespace_("foobar");
 
 // Make a class in the namespace.
 auto foo = ns->class_("Foo");
@@ -34,10 +33,14 @@ auto bar = ns->class_("Bar")->parent(foo);
 bar->member("c")->type("int")->offset(foo->member("b")->end());
 
 // Generate the sdk.
-g->generate(std::cout);
+sdk->generate(std::cout);
 ```
 Will produce the following output:
 ```
+// Sdk.hpp
+
+#pragma once
+
 namespace foobar {
 class Foo;
 class Bar;
@@ -46,12 +49,12 @@ class Foo {
 public:
     int a; // 0x0
     float b; // 0x4
-};
+}; // Size: 0x8
 
 class Bar : public Foo {
 public:
     int c; // 0x8
-};
+}; // Size: 0xc
 
 } // namespace foobar
 ```

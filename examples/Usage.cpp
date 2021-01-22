@@ -3,15 +3,15 @@
 #include <Genny.hpp>
 
 int main(int argc, char* argv[]) {
-    // Make the global namespace (empty name).
-    auto g = std::make_unique<genny::Namespace>("");
+    // Make our SDK's header file.
+    auto sdk = std::make_unique<genny::HeaderFile>("Sdk.hpp");
 
     // Add some basic types to the global namespace.
-    g->type("int")->size(4);
-    g->type("float")->size(4);
+    sdk->type("int")->size(4);
+    sdk->type("float")->size(4);
 
     // Make an actual namespace.
-    auto ns = g->namespace_("foobar");
+    auto ns = sdk->namespace_("foobar");
 
     // Make a class in the namespace.
     auto foo = ns->class_("Foo");
@@ -27,7 +27,7 @@ int main(int argc, char* argv[]) {
     bar->member("c")->type("int")->offset(foo->member("b")->end());
 
     // Generate the sdk.
-    g->generate(std::cout);
+    sdk->generate(std::cout);
 
     return 0;
 
