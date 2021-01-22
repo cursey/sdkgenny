@@ -131,7 +131,7 @@ protected:
         return add(std::make_unique<T>(name));
     }
 
-    template <typename T> T* find_or_add_tree(std::string_view name) {
+    template <typename T> T* find_in_owners_or_add(std::string_view name) {
         if (auto search = find_in_owners<T>(name, true)) {
             return search;
         }
@@ -248,7 +248,7 @@ public:
 
     // Helper that recurses though owners to find the correct type.
     auto type(std::string_view name) {
-        m_type = find_or_add_tree<Type>(name);
+        m_type = find_in_owners_or_add<Type>(name);
         return this;
     }
 
@@ -661,7 +661,7 @@ class Namespace : public Object {
 public:
     SDK_OBJECT(Namespace, Object);
 
-    auto type(std::string_view name) { return find_or_add_tree<Type>(name); }
+    auto type(std::string_view name) { return find_in_owners_or_add<Type>(name); }
     auto struct_(std::string_view name) { return find_or_add<Struct>(name); }
     auto class_(std::string_view name) { return find_or_add<Class>(name); }
     auto enum_(std::string_view name) { return find_or_add<Enum>(name); }
