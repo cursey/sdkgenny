@@ -41,6 +41,8 @@ Will produce the following output:
 
 #pragma once
 
+#pragma pack(push, 1)
+
 namespace foobar {
 class Foo;
 class Bar;
@@ -57,6 +59,8 @@ public:
 }; // Size: 0xc
 
 } // namespace foobar
+
+#pragma pack(pop)
 ```
 
 ## License
