@@ -111,8 +111,20 @@ protected:
         return nullptr;
     }
 
+    template <typename T> T* find_in_owners(std::string_view name, bool include_self) const {
+        auto owner = (include_self) ? this : m_owner;
+
+        for (; owner != nullptr; owner = owner->m_owner) {
+            if (auto search = owner->find<T>(name)) {
+                return search;
+            }
+        }
+
+        return nullptr;
+    }
+
     template <typename T> T* find_or_add(std::string_view name) {
-        if (auto search = find<T>(name); search != nullptr) {
+        if (auto search = find<T>(name)) {
             return search;
         }
 
@@ -120,10 +132,8 @@ protected:
     }
 
     template <typename T> T* find_or_add_tree(std::string_view name) {
-        for (auto obj = this; obj != nullptr; obj = obj->m_owner) {
-            if (auto search = obj->find<T>(name)) {
-                return search;
-            }
+        if (auto search = find_in_owners<T>(name, true)) {
+            return search;
         }
 
         return add(std::make_unique<T>(name));
