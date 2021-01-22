@@ -161,6 +161,16 @@ protected:
         return false;
     }
 
+    template <typename T> bool has_any_in_children() const {
+        for (auto&& child : m_children) {
+            if (child->is_a<T>() || child->has_any_in_children<T>()) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
 
 private:
     Object() : m_object_class{this} {}
@@ -777,7 +787,7 @@ public:
             }
         }
 
-        auto has_structs = has_any<Struct>();
+        auto has_structs = has_any_in_children<Struct>();
 
         if (has_structs) {
             os << "\n#pragma pack(push, 1)\n\n";
