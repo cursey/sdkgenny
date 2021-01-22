@@ -765,8 +765,19 @@ public:
             }
         }
 
-        os << "\n";
+        auto has_structs = has_any<Struct>();
+
+        if (has_structs) {
+            os << "\n#pragma pack(push, 1)\n\n";
+        } else {
+            os << "\n";
+        }
+
         generate_internal(os);
+
+        if (has_structs) {
+            os << "#pragma pack(pop)\n";
+        }
 
         if (!m_postamble.empty()) {
             os << "\n";
