@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cassert>
+#include <climits>
 #include <functional>
 #include <memory>
 #include <ostream>
@@ -63,15 +64,17 @@ public:
     template <typename T> bool is_a() const { return dynamic_cast<const T*>(this) != nullptr; }
 
     // Searches for an owner of the correct type.
-    template <typename T> T* owner() {
+    template <typename T> const T* owner() const {
         for (auto owner = m_owner; owner != nullptr; owner = owner->m_owner) {
             if (owner->is_a<T>()) {
-                return (T*)owner;
+                return (const T*)owner;
             }
         }
 
         return nullptr;
     }
+
+    template <typename T> T* owner() { return (T*)((const Object*)this)->owner<T>(); }
 
 protected:
     friend class Type;
@@ -248,6 +251,108 @@ public:
 protected:
     Type* m_type{};
     uintptr_t m_offset{};
+};
+
+
+class BitField : public Variable {
+public:
+    class Field : public Object {
+    public:
+        Field(std::string_view name) : Object{name} {}
+
+        auto size() const { return m_size; }
+        auto size(size_t size) {
+            m_size = size;
+            return this;
+        }
+
+        auto offset() const { return m_offset; }
+        auto offset(uintptr_t offset) {
+            m_offset = offset;
+            return this;
+        }
+
+        auto end() const { return offset() + size(); }
+
+        void generate(std::ostream& os) const override { 
+            owner<Variable>()->type()->generate_typename(os);
+            os << " " << m_name << " : " << m_size << ";\n";
+        }
+
+    protected:
+        size_t m_size{};
+        uintptr_t m_offset{};
+    };
+
+    BitField(uintptr_t offset) : Variable{"bitfield_" + std::to_string(offset)} { m_offset = offset; }
+
+    auto field(std::string_view name) { return find_or_add<Field>(name); }
+
+    size_t size() const override {
+        if (m_type == nullptr) {
+            return 0;
+        }
+
+        auto alignment = m_type->size() * CHAR_BIT;
+        auto max_size = m_type->size() * CHAR_BIT;
+
+        for (auto&& child : get_all<Field>()) {
+            if (child->end() > max_size) {
+                max_size = ((child->end() + alignment - 1) / alignment) * alignment;
+            }
+        }
+
+        return max_size / CHAR_BIT;
+    }
+
+    void generate(std::ostream& os) const override {
+        if (m_type == nullptr || !has_any<Field>()) {
+            return;
+        }
+
+        os << "// ";
+        m_type->generate_typename(os);
+        os << " " << m_name << " Offset: 0x" << std::hex << m_offset << "\n";
+
+        std::unordered_map<uintptr_t, Field*> field_map{};
+
+        for (auto&& field : get_all<Field>()) {
+            field_map[field->offset()] = field;
+        }
+
+        auto offset = 0;
+        auto max_offset = size() * CHAR_BIT;
+        auto last_offset = offset;
+
+        while (offset < max_offset) {
+            if (auto search = field_map.find(offset); search != field_map.end()) {
+                auto field = search->second;
+
+                // Skip unfinished fields.
+                if (field->size() == 0) {
+                    ++offset;
+                    continue;
+                }
+
+                if (offset - last_offset > 0) {
+                    m_type->generate_typename(os);
+                    os << " bitfield_pad_" << std::hex << last_offset << " : " << offset - last_offset << ";\n";
+                }
+
+                field->generate(os);
+                offset += field->size();
+                last_offset = offset;
+            } else {
+                ++offset;
+            }
+        }
+
+        // Fill out the remaining space.
+        if (offset - last_offset > 0) {
+            m_type->generate_typename(os);
+            os << " bitfield_pad_" << std::hex << last_offset << " : " << offset - last_offset << ";\n";
+        }
+    }
 };
 
 class Array : public Variable {
@@ -447,6 +552,16 @@ public:
     Struct(std::string_view name) : Type{name} {}
 
     auto variable(std::string_view name) { return find_or_add_unique<Variable>(name); }
+    auto bitfield(uintptr_t offset) {
+        for (auto&& child : get_all<BitField>()) {
+            if (child->offset() == offset) {
+                return child;
+            }
+        }
+
+        return add(std::make_unique<BitField>(offset));
+    }
+
     auto array_(std::string_view name) { return find_or_add_unique<Array>(name); }
     auto struct_(std::string_view name) { return find_or_add_unique<Struct>(name); }
     auto class_(std::string_view name) { return find_or_add_unique<Class>(name); }
