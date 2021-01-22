@@ -5,9 +5,9 @@
 #include <memory>
 #include <ostream>
 #include <set>
+#include <sstream>
 #include <string>
 #include <string_view>
-#include <sstream>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -52,27 +52,15 @@ private:
 
 class Object {
 public:
-    static Object* static_class() {
-        static Object object{};
-        return &object;
-    }
-
-    Object(std::string_view name) : m_name{name}, m_object_class{this} {}
+    Object() = delete;
+    Object(std::string_view name) : m_name{name} {}
     virtual ~Object() = default;
 
     const auto& name() const { return m_name; }
 
     virtual void generate(std::ostream& os) const {};
 
-    template <typename T> bool is_a() const {
-        for (auto i = m_object_class; i != nullptr; i = i->m_parent_class) {
-            if (i == T::static_class()) {
-                return true;
-            }
-        }
-
-        return false;
-    }
+    template <typename T> bool is_a() const { return dynamic_cast<const T*>(this) != nullptr; }
 
     // Searches for an owner of the correct type.
     template <typename T> T* owner() {
@@ -89,8 +77,6 @@ protected:
     friend class Type;
     friend class Namespace;
 
-    Object* m_object_class{};
-    Object* m_parent_class{};
     Object* m_owner{};
 
     std::string m_name{};
@@ -123,20 +109,20 @@ protected:
         return nullptr;
     }
 
-    template <typename T> T* find_or_add(std::string_view name) {
+    template <typename T, typename... TArgs> T* find_or_add(std::string_view name, TArgs... args) {
         if (auto search = find<T>(name)) {
             return search;
         }
 
-        return add(std::make_unique<T>(name));
+        return add(std::make_unique<T>(name, args...));
     }
 
-    template <typename T> T* find_in_owners_or_add(std::string_view name) {
+    template <typename T, typename... TArgs> T* find_in_owners_or_add(std::string_view name, TArgs... args) {
         if (auto search = find_in_owners<T>(name, true)) {
             return search;
         }
 
-        return add(std::make_unique<T>(name));
+        return add(std::make_unique<T>(name, args...));
     }
 
     template <typename T> std::vector<T*> get_all() const {
@@ -170,10 +156,6 @@ protected:
 
         return false;
     }
-
-
-private:
-    Object() : m_object_class{this} {}
 };
 
 template <typename T> T* cast(const Object* object) {
@@ -184,29 +166,9 @@ template <typename T> T* cast(const Object* object) {
     return nullptr;
 }
 
-
-#define SDK_OBJECT(T, TParent)                    \
-public:                                           \
-    static T* static_class() {                    \
-        static T static_t{};                      \
-        return &static_t;                         \
-    }                                             \
-                                                  \
-private:                                          \
-    T() : TParent{""} {                           \
-        m_object_class = this;                    \
-        m_parent_class = TParent::static_class(); \
-    }                                             \
-                                                  \
-public:                                           \
-    T(std::string_view name) : TParent{name} {    \
-        m_object_class = static_class();          \
-        m_parent_class = TParent::static_class(); \
-    }
-
 class Type : public Object {
 public:
-    SDK_OBJECT(Type, Object);
+    Type(std::string_view name) : Object{name} {}
 
     virtual size_t size() const { return m_size; }
     auto size(int size) {
@@ -224,7 +186,7 @@ protected:
 
 class Pointer : public Type {
 public:
-    SDK_OBJECT(Pointer, Type);
+    Pointer(std::string_view name) : Type{name} {}
 
     auto to() const { return m_to; }
     auto to(Type* to) {
@@ -248,7 +210,7 @@ inline Pointer* Type::ptr() {
 
 class Variable : public Object {
 public:
-    SDK_OBJECT(Variable, Object);
+    Variable(std::string_view name) : Object{name} {}
 
     auto type() const { return m_type; }
     auto type(Type* type) {
@@ -290,7 +252,7 @@ protected:
 
 class Array : public Variable {
 public:
-    SDK_OBJECT(Array, Variable);
+    Array(std::string_view name) : Variable{name} {}
 
     auto count() const { return m_count; }
     auto count(size_t size) {
@@ -311,7 +273,7 @@ protected:
 
 class Parameter : public Object {
 public:
-    SDK_OBJECT(Parameter, Object);
+    Parameter(std::string_view name) : Object{name} {}
 
     auto type() const { return m_type; }
     auto type(Type* type) {
@@ -330,7 +292,7 @@ protected:
 
 class Function : public Object {
 public:
-    SDK_OBJECT(Function, Object);
+    Function(std::string_view name) : Object{name} {}
 
     auto param(std::string_view name) { return find_or_add<Parameter>(name); }
 
@@ -395,7 +357,7 @@ protected:
 
 class VirtualFunction : public Function {
 public:
-    SDK_OBJECT(VirtualFunction, Function);
+    VirtualFunction(std::string_view name) : Function{name} {}
 
     void generate(std::ostream& os) const override {
         os << "virtual ";
@@ -411,7 +373,7 @@ public:
 
 class Enum : public Type {
 public:
-    SDK_OBJECT(Enum, Type);
+    Enum(std::string_view name) : Type{name} {}
 
     auto value(std::string_view name, uint64_t value) {
         for (auto&& [val_name, val_val] : m_values) {
@@ -469,7 +431,7 @@ protected:
 
 class EnumClass : public Enum {
 public:
-    SDK_OBJECT(EnumClass, Enum);
+    EnumClass(std::string_view name) : Enum{name} {}
 
     void generate(std::ostream& os) const override {
         os << "enum class " << m_name;
@@ -482,7 +444,7 @@ public:
 
 class Struct : public Type {
 public:
-    SDK_OBJECT(Struct, Type);
+    Struct(std::string_view name) : Type{name} {}
 
     auto member(std::string_view name) { return find_or_add_unique<Variable>(name); }
     auto array_(std::string_view name) { return find_or_add_unique<Array>(name); }
@@ -538,7 +500,7 @@ public:
 protected:
     Struct* m_parent{};
 
-    template <typename T> T* find_or_add_unique(std::string_view name) {
+    template <typename T, typename... TArgs> T* find_or_add_unique(std::string_view name, TArgs... args) {
         if (auto search = find<T>(name); search != nullptr) {
             return search;
         }
@@ -561,10 +523,10 @@ protected:
         } while (has_collision);
 
         if (num_collisions == 0) {
-            return add(std::make_unique<T>(name));
+            return add(std::make_unique<T>(name, args...));
         }
 
-        return add(std::make_unique<T>(fixed_name));
+        return add(std::make_unique<T>(fixed_name, args...));
     }
 
     void generate_inheritance(std::ostream& os) const {
@@ -613,7 +575,8 @@ protected:
             if (auto search = var_map.find(offset); search != var_map.end()) {
                 auto var = search->second;
 
-                // Skip variables where the user has not given us a valid size (forgot to set a type or the type is unfinished).
+                // Skip variables where the user has not given us a valid size (forgot to set a type or the type is
+                // unfinished).
                 if (var->size() == 0) {
                     ++offset;
                     continue;
@@ -653,7 +616,7 @@ protected:
 
 class Class : public Struct {
 public:
-    SDK_OBJECT(Class, Struct);
+    Class(std::string_view name) : Struct{name} {}
 
     void generate_forward_decl(std::ostream& os) const { os << "class " << m_name << ";\n"; }
 
@@ -669,7 +632,7 @@ public:
 
 class Namespace : public Object {
 public:
-    SDK_OBJECT(Namespace, Object);
+    Namespace(std::string_view name) : Object{name} {}
 
     auto type(std::string_view name) { return find_in_owners_or_add<Type>(name); }
     auto struct_(std::string_view name) { return find_or_add<Struct>(name); }
@@ -733,9 +696,10 @@ protected:
 
 class HeaderFile : public Namespace {
 public:
-    SDK_OBJECT(HeaderFile, Namespace);
+    HeaderFile(std::string_view name) : Namespace{name} {}
 
-    auto preamble(std::string_view preamble) { m_preamble = preamble;
+    auto preamble(std::string_view preamble) {
+        m_preamble = preamble;
         return this;
     }
     auto postamble(std::string_view postamble) {
@@ -751,8 +715,8 @@ public:
         m_local_includes.emplace(header);
         return this;
     }
-    
-    void generate(std::ostream& os) const override { 
+
+    void generate(std::ostream& os) const override {
         if (!m_name.empty()) {
             os << "// " << m_name << "\n";
         }
