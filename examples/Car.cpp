@@ -45,34 +45,34 @@ int main(int argc, char* argv[]) {
 
     auto vec3 = g->struct_("Vec3")->size(16);
 
-    vec3->member("x")->type(g->type("float"))->offset(0);
-    vec3->member("y")->type(g->type("float"))->offset(4);
-    vec3->member("z")->type(g->type("float"))->offset(8);
+    vec3->variable("x")->type(g->type("float"))->offset(0);
+    vec3->variable("y")->type(g->type("float"))->offset(4);
+    vec3->variable("z")->type(g->type("float"))->offset(8);
 
     auto car = g->class_("Car")->parent(g->class_("ModeOfTransportation"));
 
-    car->member("weight")->type(g->type("int"))->offset(8);
-    car->member("value")->type(g->type("float"))->offset(12);
+    car->variable("weight")->type(g->type("int"))->offset(8);
+    car->variable("value")->type(g->type("float"))->offset(12);
 
     auto wheel = car->class_("Wheel");
     auto color = car->enum_("Color")->value("RED", 0)->value("BLACK", 1);
     auto door = car->struct_("Door");
 
-    wheel->member("size")->type(g->type("int"))->offset(0);
-    door->member("color")->type(color)->offset(0);
+    wheel->variable("size")->type(g->type("int"))->offset(0);
+    door->variable("color")->type(color)->offset(0);
     car->array_("wheels")->count(4)->type(wheel)->offset(16);
     car->array_("doors")->count(4)->type(door)->offset(16 + 4 * 4);
-    car->member("pos")->type(g->type("Vec3"))->offset(car->array_("doors")->end());
-    car->member("pos_history")->type(g->type("Vec3")->ptr())->offset(car->member("pos")->end());
+    car->variable("pos")->type(g->type("Vec3"))->offset(car->array_("doors")->end());
+    car->variable("pos_history")->type(g->type("Vec3")->ptr())->offset(car->variable("pos")->end());
 
-    auto drive = car->method("drive");
+    auto drive = car->function("drive");
 
     drive->returns(g->type("float"));
     drive->param("speed")->type(g->type("float"));
     drive->param("distance")->type(g->type("float"));
     drive->procedure(R"(std::cout << "Oh my god guys I'm driving!"; return 5.0f;)");
 
-    auto open_door = car->virtual_method("open_door");
+    auto open_door = car->virtual_function("open_door");
 
     open_door->param("where")->type(g->type("Vec3")->ptr());
 
@@ -81,7 +81,7 @@ int main(int argc, char* argv[]) {
     auto two_door = g->class_("TwoDoorCar")->parent(g->class_("Car"));
 
     // Name collision will occur. Will have a number appended in the output.
-    two_door->member("weight")->type(g->type("long"))->offset(120);
+    two_door->variable("weight")->type(g->type("long"))->offset(120);
     assert(two_door->owner<genny::Namespace>() == g.get());
 
     g->generate(std::cout);

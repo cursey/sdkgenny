@@ -17,14 +17,14 @@ int main(int argc, char* argv[]) {
     auto foo = ns->class_("Foo");
 
     // Add some members.
-    foo->member("a")->type("int")->offset(0);
-    foo->member("b")->type("float")->offset(4);
+    foo->variable("a")->type("int")->offset(0);
+    foo->variable("b")->type("float")->offset(4);
 
     // Make a subclass.
     auto bar = ns->class_("Bar")->parent(foo);
 
     // Add a member after 'b'.
-    bar->member("c")->type("int")->offset(foo->member("b")->end());
+    bar->variable("c")->type("int")->offset(foo->variable("b")->end());
 
     // Generate the sdk.
     sdk->generate(std::cout);

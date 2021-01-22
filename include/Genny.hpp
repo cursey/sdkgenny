@@ -446,14 +446,14 @@ class Struct : public Type {
 public:
     Struct(std::string_view name) : Type{name} {}
 
-    auto member(std::string_view name) { return find_or_add_unique<Variable>(name); }
+    auto variable(std::string_view name) { return find_or_add_unique<Variable>(name); }
     auto array_(std::string_view name) { return find_or_add_unique<Array>(name); }
     auto struct_(std::string_view name) { return find_or_add_unique<Struct>(name); }
     auto class_(std::string_view name) { return find_or_add_unique<Class>(name); }
     auto enum_(std::string_view name) { return find_or_add_unique<Enum>(name); }
     auto enum_class(std::string_view name) { return find_or_add_unique<EnumClass>(name); }
-    auto method(std::string_view name) { return find_or_add_unique<Function>(name); }
-    auto virtual_method(std::string_view name) { return find_or_add_unique<VirtualFunction>(name); }
+    auto function(std::string_view name) { return find_or_add_unique<Function>(name); }
+    auto virtual_function(std::string_view name) { return find_or_add_unique<VirtualFunction>(name); }
 
     auto parent() const { return m_parent; }
     auto parent(Struct* parent) {
