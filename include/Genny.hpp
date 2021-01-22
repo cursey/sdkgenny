@@ -336,7 +336,7 @@ public:
 
                 if (offset - last_offset > 0) {
                     m_type->generate_typename(os);
-                    os << " bitfield_pad_" << std::hex << last_offset << " : " << offset - last_offset << ";\n";
+                    os << " bitfield_pad_" << std::hex << last_offset << " : " << std::dec << offset - last_offset << ";\n";
                 }
 
                 field->generate(os);
@@ -350,7 +350,7 @@ public:
         // Fill out the remaining space.
         if (offset - last_offset > 0) {
             m_type->generate_typename(os);
-            os << " bitfield_pad_" << std::hex << last_offset << " : " << offset - last_offset << ";\n";
+            os << " bitfield_pad_" << std::hex << last_offset << " : " << std::dec << offset - last_offset << ";\n";
         }
     }
 };
