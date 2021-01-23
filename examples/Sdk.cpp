@@ -102,6 +102,7 @@ int main(int argc, char* argv[]) {
     auto CClass = c->class_("CClass");
     CClass->variable("ba_class")->type(BAClass->ptr());
     CClass->variable("a_enum")->offset(CClass->variable("ba_class")->end())->type(AEnum);
+    CClass->variable("ba_class_2")->offset(CClass->variable("a_enum")->end())->type(BAClass->ptr()->ptr()->ptr());
 
 
     car(g->namespace_("car"));

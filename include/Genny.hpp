@@ -90,6 +90,7 @@ public:
 
 protected:
     friend class Type;
+    friend class Pointer;
     friend class Namespace;
     friend class Sdk;
 
@@ -252,6 +253,8 @@ public:
         return this;
     }
 
+    auto ptr() { return m_owner->find_or_add<Pointer>(m_name + '*')->to(this); }
+
     size_t size() const override { return sizeof(uintptr_t); }
     void generate_typename_for(std::ostream& os, const Object* obj) const override {
         m_to->generate_typename_for(os, obj);
@@ -263,7 +266,7 @@ protected:
 };
 
 inline Pointer* Type::ptr() {
-    return m_owner->find_or_add<Pointer>(m_name)->to(this);
+    return m_owner->find_or_add<Pointer>(m_name + '*')->to(this);
 }
 
 class Variable : public Object {
