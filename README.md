@@ -10,7 +10,7 @@ Copy `Genny.hpp` from the `include/` directory into your project and `#include` 
 Here is a short example of how to use SdkGenny. This does not showcase every feature. For more examples check the `examples/` directory.
 ```
 // Make our SDK's header file.
-auto sdk = std::make_unique<genny::HeaderFile>("Sdk.hpp");
+auto sdk = std::make_unique<genny::HeaderFile>("Usage.hpp");
 
 // Add some basic types to the global namespace.
 sdk->type("int")->size(4);
@@ -47,6 +47,9 @@ namespace foobar {
 class Foo;
 class Bar;
 
+} // namespace foobar
+
+namespace foobar {
 class Foo {
 public:
     int a; // 0x0

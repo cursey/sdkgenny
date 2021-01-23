@@ -169,17 +169,37 @@ template <typename T> T* cast(const Object* object) {
     return nullptr;
 }
 
-class Type : public Object {
+class Typename : public Object {
 public:
-    Type(std::string_view name) : Object{name} {}
+    Typename(std::string_view name) : Object{name} {}
+
+    virtual const std::string get_typename() const { return m_name; }
+
+    virtual void generate_typename_for(std::ostream& os, const Object* obj) const {
+        if (auto owner_type = owner<Typename>()) {
+            if (owner_type != obj->owner<Typename>()) {
+                auto&& name = owner_type->get_typename();
+
+                if (!name.empty()) {
+                    owner_type->generate_typename_for(os, obj);
+                    os << "::";
+                }
+            }
+        }
+
+        os << get_typename();
+    }
+};
+
+class Type : public Typename {
+public:
+    Type(std::string_view name) : Typename{name} {}
 
     virtual size_t size() const { return m_size; }
     auto size(int size) {
         m_size = size;
         return this;
     }
-
-    virtual void generate_typename(std::ostream& os) const { os << m_name; }
 
     Pointer* ptr();
 
@@ -198,8 +218,8 @@ public:
     }
 
     size_t size() const override { return sizeof(uintptr_t); }
-    void generate_typename(std::ostream& os) const override {
-        m_to->generate_typename(os);
+    void generate_typename_for(std::ostream& os, const Object* obj) const override {
+        m_to->generate_typename_for(os, obj);
         os << "*";
     }
 
@@ -244,7 +264,7 @@ public:
     auto end() const { return offset() + size(); }
 
     void generate(std::ostream& os) const override {
-        m_type->generate_typename(os);
+        m_type->generate_typename_for(os, this);
         os << " " << m_name << "; // 0x" << std::hex << m_offset << "\n";
     }
 
@@ -253,8 +273,7 @@ protected:
     uintptr_t m_offset{};
 };
 
-
-class BitField : public Variable {
+class Bitfield : public Variable {
 public:
     class Field : public Object {
     public:
@@ -274,8 +293,8 @@ public:
 
         auto end() const { return offset() + size(); }
 
-        void generate(std::ostream& os) const override { 
-            owner<Variable>()->type()->generate_typename(os);
+        void generate(std::ostream& os) const override {
+            owner<Variable>()->type()->generate_typename_for(os, this);
             os << " " << m_name << " : " << m_size << ";\n";
         }
 
@@ -284,7 +303,7 @@ public:
         uintptr_t m_offset{};
     };
 
-    BitField(uintptr_t offset) : Variable{"bitfield_" + std::to_string(offset)} { m_offset = offset; }
+    Bitfield(uintptr_t offset) : Variable{"bitfield_" + std::to_string(offset)} { m_offset = offset; }
 
     auto field(std::string_view name) { return find_or_add<Field>(name); }
 
@@ -311,7 +330,7 @@ public:
         }
 
         os << "// ";
-        m_type->generate_typename(os);
+        m_type->generate_typename_for(os, this);
         os << " " << m_name << " Offset: 0x" << std::hex << m_offset << "\n";
 
         std::unordered_map<uintptr_t, Field*> field_map{};
@@ -335,8 +354,9 @@ public:
                 }
 
                 if (offset - last_offset > 0) {
-                    m_type->generate_typename(os);
-                    os << " bitfield_pad_" << std::hex << last_offset << " : " << std::dec << offset - last_offset << ";\n";
+                    m_type->generate_typename_for(os, this);
+                    os << " bitfield_pad_" << std::hex << last_offset << " : " << std::dec << offset - last_offset
+                       << ";\n";
                 }
 
                 field->generate(os);
@@ -349,7 +369,7 @@ public:
 
         // Fill out the remaining space.
         if (offset - last_offset > 0) {
-            m_type->generate_typename(os);
+            m_type->generate_typename_for(os, this);
             os << " bitfield_pad_" << std::hex << last_offset << " : " << std::dec << offset - last_offset << ";\n";
         }
     }
@@ -368,7 +388,7 @@ public:
     size_t size() const override { return m_type->size() * m_count; }
 
     void generate(std::ostream& os) const override {
-        m_type->generate_typename(os);
+        m_type->generate_typename_for(os, this);
         os << " " << m_name << "[" << std::dec << m_count << "]; // 0x" << std::hex << m_offset << "\n";
     }
 
@@ -387,7 +407,7 @@ public:
     }
 
     void generate(std::ostream& os) const override {
-        m_type->generate_typename(os);
+        m_type->generate_typename_for(os, this);
         os << " " << m_name;
     }
 
@@ -426,7 +446,7 @@ protected:
         if (m_return_value == nullptr) {
             os << "void";
         } else {
-            m_return_value->generate_typename(os);
+            m_return_value->generate_typename_for(os, this);
         }
 
         os << " " << m_name << "(";
@@ -521,7 +541,7 @@ protected:
     void generate_type(std::ostream& os) const {
         if (m_type != nullptr) {
             os << " : ";
-            m_type->generate_typename(os);
+            m_type->generate_typename_for(os, this);
         }
     }
 
@@ -553,13 +573,13 @@ public:
 
     auto variable(std::string_view name) { return find_or_add_unique<Variable>(name); }
     auto bitfield(uintptr_t offset) {
-        for (auto&& child : get_all<BitField>()) {
+        for (auto&& child : get_all<Bitfield>()) {
             if (child->offset() == offset) {
                 return child;
             }
         }
 
-        return add(std::make_unique<BitField>(offset));
+        return add(std::make_unique<Bitfield>(offset));
     }
 
     auto array_(std::string_view name) { return find_or_add_unique<Array>(name); }
@@ -745,9 +765,9 @@ public:
     }
 };
 
-class Namespace : public Object {
+class Namespace : public Typename {
 public:
-    Namespace(std::string_view name) : Object{name} {}
+    Namespace(std::string_view name) : Typename{name} {}
 
     auto type(std::string_view name) { return find_in_owners_or_add<Type>(name); }
     auto struct_(std::string_view name) { return find_or_add<Struct>(name); }
@@ -756,7 +776,22 @@ public:
     auto enum_class(std::string_view name) { return find_or_add<EnumClass>(name); }
     auto namespace_(std::string_view name) { return find_or_add<Namespace>(name); }
 
+    virtual void generate_forward_decls(std::ostream& os) const {
+        if (has_any<Enum>() || has_any<Struct>()) {
+            if (!m_name.empty()) {
+                os << "namespace " << m_name << " {\n";
+            }
+
+            generate_forward_decls_internal(os);
+
+            if (!m_name.empty()) {
+                os << "} // namespace " << m_name << "\n\n";
+            }
+        }
+    }
+
     void generate(std::ostream& os) const override {
+
         if (!m_name.empty()) {
             os << "namespace " << m_name << " {\n";
         }
@@ -769,15 +804,12 @@ public:
     }
 
 protected:
-    void generate_internal(std::ostream& os) const {
-        for (auto&& child : get_all<Namespace>()) {
-            child->generate(os);
-            os << "\n";
-        }
-
-        for (auto&& child : get_all<Enum>()) {
-            child->generate(os);
-            os << "\n";
+    void generate_forward_decls_internal(std::ostream& os) const { 
+        if (has_any<Enum>()) {
+            for (auto&& child : get_all<Enum>()) {
+                child->generate(os);
+                os << "\n";
+            }
         }
 
         if (has_any<Struct>()) {
@@ -786,7 +818,16 @@ protected:
             }
 
             os << "\n";
+        }
+    }
 
+    void generate_internal(std::ostream& os) const {
+        for (auto&& child : get_all<Namespace>()) {
+            child->generate(os);
+            os << "\n";
+        }
+
+        if (has_any<Struct>()) {
             std::unordered_set<const Struct*> generated_structs{};
             std::function<void(const Struct*)> generate_struct = [&](const Struct* struct_) {
                 if (generated_structs.find(struct_) != generated_structs.end()) {
@@ -831,48 +872,55 @@ public:
         return this;
     }
 
+    const std::string get_typename() const override { return ""; }
+
+    void generate_forward_decls(std::ostream& os) const override {
+        generate_forward_decls_internal(os);
+
+        for (auto&& ns : get_all<Namespace>()) {
+            ns->generate_forward_decls(os);
+        }
+    }
+
     void generate(std::ostream& os) const override {
         if (!m_name.empty()) {
-            os << "// " << m_name << "\n";
+            os << "// " << m_name << "\n\n";
         }
 
         if (!m_preamble.empty()) {
             std::istringstream sstream{m_preamble};
             std::string line{};
 
-            os << "\n";
-
             while (std::getline(sstream, line)) {
                 os << "// " << line << "\n";
             }
         }
 
-        os << "\n";
-        os << "#pragma once\n";
+        os << "#pragma once\n\n";
 
         if (!m_includes.empty()) {
-            os << "\n";
-
             for (auto&& include : m_includes) {
                 os << "#include <" << include << ">\n";
             }
+
+            os << "\n";
         }
 
         if (!m_local_includes.empty()) {
-            os << "\n";
-
             for (auto&& include : m_local_includes) {
                 os << "#include \"" << include << "\"\n";
             }
+
+            os << "\n";
         }
+
+        generate_forward_decls(os);
 
         auto has_structs = has_any_in_children<Struct>();
 
         if (has_structs) {
-            os << "\n#pragma pack(push, 1)\n\n";
-        } else {
-            os << "\n";
-        }
+            os << "#pragma pack(push, 1)\n\n";
+        } 
 
         generate_internal(os);
 

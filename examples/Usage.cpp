@@ -4,7 +4,7 @@
 
 int main(int argc, char* argv[]) {
     // Make our SDK's header file.
-    auto sdk = std::make_unique<genny::HeaderFile>("Sdk.hpp");
+    auto sdk = std::make_unique<genny::HeaderFile>("Usage.hpp");
 
     // Add some basic types to the global namespace.
     sdk->type("int")->size(4);
