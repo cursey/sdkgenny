@@ -777,19 +777,21 @@ public:
     auto namespace_(std::string_view name) { return find_or_add<Namespace>(name); }
 
     virtual void generate_forward_decls(std::ostream& os) const {
-        if (has_any<Enum>() || has_any<Struct>() || has_any<Namespace>()) {
-            if (!m_name.empty()) {
-                os << "namespace " << m_name << " {\n";
-            }
+        if (!has_any<Enum>() && !has_any<Struct>() && !has_any<Namespace>()) {
+            return;
+        }
 
-            {
-                Indent _{os};
-                generate_forward_decls_internal(os);
-            }
+        if (!m_name.empty()) {
+            os << "namespace " << m_name << " {\n";
+        }
 
-            if (!m_name.empty()) {
-                os << "} // namespace " << m_name << "\n\n";
-            }
+        {
+            Indent _{os};
+            generate_forward_decls_internal(os);
+        }
+
+        if (!m_name.empty()) {
+            os << "} // namespace " << m_name << "\n\n";
         }
     }
 
@@ -808,7 +810,7 @@ public:
         }
 
         if (!m_name.empty()) {
-            os << "} // namespace " << m_name << "\n";
+            os << "} // namespace " << m_name << "\n\n";
         }
     }
 
@@ -837,7 +839,6 @@ protected:
     void generate_internal(std::ostream& os) const {
         for (auto&& child : get_all<Namespace>()) {
             child->generate(os);
-            os << "\n";
         }
 
         if (has_any<Struct>()) {
