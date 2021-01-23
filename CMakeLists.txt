@@ -18,3 +18,7 @@ add_executable(example_usage "examples/Usage.cpp")
 target_compile_features(example_usage PRIVATE cxx_std_17)
 target_include_directories(example_usage PRIVATE "include/")
 
+add_executable(example_sdk "examples/Sdk.cpp")
+target_compile_features(example_sdk PRIVATE cxx_std_17)
+target_include_directories(example_sdk PRIVATE "include/")
+

@@ -1,6 +1,9 @@
 #pragma once
 
+#include <algorithm>
 #include <climits>
+#include <filesystem>
+#include <fstream>
 #include <functional>
 #include <memory>
 #include <ostream>
@@ -73,9 +76,22 @@ public:
 
     template <typename T> T* owner() { return (T*)((const Object*)this)->owner<T>(); }
 
+    template <typename T> std::vector<T*> owners() const {
+        std::vector<T*> owners{};
+
+        for (auto owner = m_owner; owner != nullptr; owner = owner->m_owner) {
+            if (owner->is_a<T>()) {
+                owners.emplace_back((T*)owner);
+            }
+        }
+
+        return owners;
+    }
+
 protected:
     friend class Type;
     friend class Namespace;
+    friend class Sdk;
 
     Object* m_owner{};
 
@@ -137,6 +153,16 @@ protected:
         return children;
     }
 
+    template <typename T> void get_all_in_children(std::unordered_set<T*>& objects) const {
+        if (is_a<T>()) {
+            objects.emplace((T*)this);
+        }
+
+        for (auto&& child : m_children) {
+            child->get_all_in_children(objects);
+        }
+    }
+
     template <typename T> bool has_any() const {
         for (auto&& child : m_children) {
             if (child->is_a<T>()) {
@@ -150,6 +176,18 @@ protected:
     template <typename T> bool has_any_in_children() const {
         for (auto&& child : m_children) {
             if (child->is_a<T>() || child->has_any_in_children<T>()) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    template <typename T> bool is_child_of(T* obj) const {
+        auto o = owners<T>();
+
+        for (auto&& owner : owners<T>()) {
+            if (owner == obj) {
                 return true;
             }
         }
@@ -952,6 +990,162 @@ private:
     std::string m_postamble{};
     std::set<std::string> m_includes{};
     std::set<std::string> m_local_includes{};
+};
+
+class Sdk {
+public:
+    Sdk() = default;
+    virtual ~Sdk() = default;
+
+    auto global_ns() const { return m_global_ns.get(); }
+
+    void generate(const std::filesystem::path& sdk_path) const { generate_namespace(sdk_path, m_global_ns.get()); }
+
+protected:
+    std::unique_ptr<Namespace> m_global_ns{std::make_unique<Namespace>("")};
+
+    std::filesystem::path include_path_for_object(Object* obj) const {
+        std::filesystem::path path{};
+        auto owners = obj->owners<Namespace>();
+
+        std::reverse(owners.begin(), owners.end());
+
+        for (auto&& owner : owners) {
+            if (owner->name().empty()) {
+                continue;
+            }
+
+            path /= owner->name();
+        }
+
+        path /= obj->name();
+        path += ".hpp";
+
+        return path;
+    }
+
+    std::filesystem::path include_path(Object* from, Object* to) const {
+        auto to_path = include_path_for_object(to);
+        auto from_path = include_path_for_object(from).parent_path();
+
+        return std::filesystem::relative(to_path, from_path);
+    }
+
+    template <typename T> void generate(const std::filesystem::path& ns_path, Namespace* ns) const {
+        for (auto&& obj : ns->get_all<T>()) {
+            auto obj_path = ns_path / obj->name();
+            obj_path += ".hpp";
+            std::ofstream os{obj_path};
+
+            os << "#pragma once\n";
+
+            std::unordered_set<Variable*> variables{};
+            std::unordered_set<Type*> types_to_include{};
+            std::unordered_set<Struct*> structs_to_forward_decl{};
+
+            obj->get_all_in_children<Variable>(variables);
+
+            for (auto&& var : variables) {
+                auto var_type = var->type();
+
+                if (auto ptr = dynamic_cast<Pointer*>(var_type)) {
+                    if (auto s = dynamic_cast<Struct*>(ptr->to())) {
+                        structs_to_forward_decl.emplace(s);
+                    } else if (auto e = dynamic_cast<Enum*>(ptr->to())) {
+                        types_to_include.emplace(e);
+                    }
+                } else if (auto e = dynamic_cast<Enum*>(var_type)) {
+                    types_to_include.emplace(e);
+                } else if (auto s = dynamic_cast<Struct*>(var_type)) {
+                    types_to_include.emplace(s);
+                }
+            }
+
+            if (auto s = dynamic_cast<Struct*>(obj)) {
+                if (auto parent = s->parent()) {
+                    types_to_include.emplace(parent);
+                }
+            }
+
+            for (auto&& type : types_to_include) {
+                if (!type->is_child_of(obj)) {
+                    os << "#include \"" << include_path(obj, type).string() << "\"\n";
+                }
+            }
+
+            for (auto&& type : structs_to_forward_decl) {
+                // Only forward decl structs we haven't already included.
+                if (types_to_include.find(type) == types_to_include.end() && !type->is_child_of(obj)) {
+                    auto owners = type->owners<Namespace>();
+
+                    if (owners.size() > 1) {
+                        std::reverse(owners.begin(), owners.end());
+
+                        os << "namespace ";
+
+                        for (auto&& owner : owners) {
+                            if (owner->name().empty()) {
+                                continue;
+                            }
+
+                            os << owner->name();
+
+                            if (owner != owners.back()) {
+                                os << "::";
+                            }
+                        }
+
+                        os << " {\n";
+                    }
+
+                    type->generate_forward_decl(os);
+
+                    if (owners.size() > 1) {
+                        os << "}\n";
+                    }
+                }
+            }
+
+            auto owners = obj->owners<Namespace>();
+
+            if (owners.size() > 1) {
+                std::reverse(owners.begin(), owners.end());
+
+                os << "namespace ";
+
+                for (auto&& owner : owners) {
+                    if (owner->name().empty()) {
+                        continue;
+                    }
+
+                    os << owner->name();
+
+                    if (owner != owners.back()) {
+                        os << "::";
+                    }
+                }
+
+                os << " {\n";
+            }
+
+            obj->generate(os);
+
+            if (owners.size() > 1) {
+                os << "}\n";
+            }
+        }
+    }
+
+    void generate_namespace(const std::filesystem::path& ns_path, Namespace* ns) const {
+        std::filesystem::create_directories(ns_path);
+
+        generate<Enum>(ns_path, ns);
+        generate<Struct>(ns_path, ns);
+
+        for (auto&& child : ns->get_all<Namespace>()) {
+            generate_namespace(ns_path / child->name(), child);
+        }
+    }
 };
 
 } // namespace genny
