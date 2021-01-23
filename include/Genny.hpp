@@ -794,6 +794,9 @@ public:
     }
 
     void generate(std::ostream& os) const override {
+        if (!has_any_in_children<Struct>()) {
+            return;
+        }
 
         if (!m_name.empty()) {
             os << "namespace " << m_name << " {\n";
