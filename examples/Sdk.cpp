@@ -97,7 +97,7 @@ int main(int argc, char* argv[]) {
     auto b = g->namespace_("b");
     auto ba = b->namespace_("ba"); 
     auto BAClass = ba->class_("BAClass");
-    BAClass->variable("a_enum")->type(AEnum->ptr());
+    BAClass->variable("a_enum")->offset(8)->type(AEnum->ptr());
     auto c = g->namespace_("c");
     auto CClass = c->class_("CClass");
     CClass->variable("ba_class")->type(BAClass->ptr());
@@ -107,6 +107,10 @@ int main(int argc, char* argv[]) {
 
     car(g->namespace_("car"));
     usage(g->namespace_("usage"));
+
+    auto drive = BAClass->virtual_function("car_at_pos");
+    drive->returns(g->namespace_("car")->class_("Car")->ptr());
+    drive->param("pos")->type(g->struct_("Vec3"));
 
     auto sdk_path = std::filesystem::current_path() / "example_sdk";
     std::filesystem::remove_all(sdk_path);

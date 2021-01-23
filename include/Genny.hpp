@@ -1029,39 +1029,49 @@ protected:
 
     std::filesystem::path include_path(Object* from, Object* to) const {
         auto to_path = include_path_for_object(to);
-        auto from_path = include_path_for_object(from).parent_path();
+        auto from_path = include_path_for_object(from);
 
-        return std::filesystem::relative(to_path, from_path);
+        return std::filesystem::relative(to_path.parent_path(), from_path.parent_path()) / to_path.filename();
     }
 
-    template <typename T> void generate(const std::filesystem::path& ns_path, Namespace* ns) const {
+    template <typename T> void generate(const std::filesystem::path& sdk_path, Namespace* ns) const {
         for (auto&& obj : ns->get_all<T>()) {
-            auto obj_path = ns_path / obj->name();
-            obj_path += ".hpp";
+            auto obj_path = sdk_path / include_path_for_object(obj);
+            std::filesystem::create_directories(obj_path.parent_path());
             std::ofstream os{obj_path};
 
             os << "#pragma once\n";
 
             std::unordered_set<Variable*> variables{};
+            std::unordered_set<Function*> functions{};
             std::unordered_set<Type*> types_to_include{};
             std::unordered_set<Struct*> structs_to_forward_decl{};
-
-            obj->get_all_in_children<Variable>(variables);
-
-            for (auto&& var : variables) {
-                auto var_type = var->type();
-
-                if (auto ptr = dynamic_cast<Pointer*>(var_type)) {
+            auto add_type = [&](Type* t) {
+                if (auto ptr = dynamic_cast<Pointer*>(t)) {
                     if (auto s = dynamic_cast<Struct*>(ptr->to())) {
                         structs_to_forward_decl.emplace(s);
                     } else if (auto e = dynamic_cast<Enum*>(ptr->to())) {
                         types_to_include.emplace(e);
                     }
-                } else if (auto e = dynamic_cast<Enum*>(var_type)) {
+                } else if (auto e = dynamic_cast<Enum*>(t)) {
                     types_to_include.emplace(e);
-                } else if (auto s = dynamic_cast<Struct*>(var_type)) {
+                } else if (auto s = dynamic_cast<Struct*>(t)) {
                     types_to_include.emplace(s);
                 }
+            };
+
+            obj->get_all_in_children<Variable>(variables);
+            obj->get_all_in_children<Function>(functions);
+
+            for (auto&& var : variables) {
+                add_type(var->type());
+            }
+
+            for (auto&& fn : functions) {
+                for (auto&& param : fn->get_all<Parameter>()) {
+                    add_type(param->type());
+                }
+                add_type(fn->returns());
             }
 
             if (auto s = dynamic_cast<Struct*>(obj)) {
@@ -1139,14 +1149,13 @@ protected:
         }
     }
 
-    void generate_namespace(const std::filesystem::path& ns_path, Namespace* ns) const {
-        std::filesystem::create_directories(ns_path);
+    void generate_namespace(const std::filesystem::path& sdk_path, Namespace* ns) const {
 
-        generate<Enum>(ns_path, ns);
-        generate<Struct>(ns_path, ns);
+        generate<Enum>(sdk_path, ns);
+        generate<Struct>(sdk_path, ns);
 
         for (auto&& child : ns->get_all<Namespace>()) {
-            generate_namespace(ns_path / child->name(), child);
+            generate_namespace(sdk_path, child);
         }
     }
 };
