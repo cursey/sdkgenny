@@ -1,6 +1,5 @@
 #pragma once
 
-#include <cassert>
 #include <climits>
 #include <functional>
 #include <memory>
@@ -58,8 +57,6 @@ public:
     virtual ~Object() = default;
 
     const auto& name() const { return m_name; }
-
-    virtual void generate(std::ostream& os) const {};
 
     template <typename T> bool is_a() const { return dynamic_cast<const T*>(this) != nullptr; }
 
@@ -263,7 +260,7 @@ public:
 
     auto end() const { return offset() + size(); }
 
-    void generate(std::ostream& os) const override {
+    virtual void generate(std::ostream& os) const {
         m_type->generate_typename_for(os, this);
         os << " " << m_name << "; // 0x" << std::hex << m_offset << "\n";
     }
@@ -293,7 +290,7 @@ public:
 
         auto end() const { return offset() + size(); }
 
-        void generate(std::ostream& os) const override {
+        void generate(std::ostream& os) const {
             owner<Variable>()->type()->generate_typename_for(os, this);
             os << " " << m_name << " : " << m_size << ";\n";
         }
@@ -406,7 +403,7 @@ public:
         return this;
     }
 
-    void generate(std::ostream& os) const override {
+    virtual void generate(std::ostream& os) const {
         m_type->generate_typename_for(os, this);
         os << " " << m_name;
     }
@@ -433,7 +430,7 @@ public:
         return this;
     }
 
-    void generate(std::ostream& os) const override {
+    virtual void generate(std::ostream& os) const {
         generate_prototype(os);
         generate_procedure(os);
     }
@@ -526,7 +523,7 @@ public:
         }
     }
 
-    void generate(std::ostream& os) const override {
+    virtual void generate(std::ostream& os) const {
         os << "enum " << m_name;
         generate_type(os);
         os << " {\n";
@@ -624,7 +621,7 @@ public:
 
     virtual void generate_forward_decl(std::ostream& os) const { os << "struct " << m_name << ";\n"; }
 
-    void generate(std::ostream& os) const override {
+    virtual void generate(std::ostream& os) const {
         os << "struct " << m_name;
         generate_inheritance(os);
         os << " {\n";
@@ -795,7 +792,7 @@ public:
         }
     }
 
-    void generate(std::ostream& os) const override {
+    virtual void generate(std::ostream& os) const {
         if (!has_any_in_children<Struct>()) {
             return;
         }
@@ -815,7 +812,7 @@ public:
     }
 
 protected:
-    void generate_forward_decls_internal(std::ostream& os) const { 
+    void generate_forward_decls_internal(std::ostream& os) const {
         if (has_any<Enum>()) {
             for (auto&& child : get_all<Enum>()) {
                 child->generate(os);
@@ -888,11 +885,9 @@ public:
 
     const std::string get_typename() const override { return ""; }
 
-    void generate_forward_decls(std::ostream& os) const override {
-        generate_forward_decls_internal(os);
-    }
+    void generate_forward_decls(std::ostream& os) const override { generate_forward_decls_internal(os); }
 
-    void generate(std::ostream& os) const override {
+    void generate(std::ostream& os) const {
         if (!m_name.empty()) {
             os << "// " << m_name << "\n\n";
         }
@@ -930,7 +925,7 @@ public:
 
         if (has_structs) {
             os << "#pragma pack(push, 1)\n\n";
-        } 
+        }
 
         generate_internal(os);
 
