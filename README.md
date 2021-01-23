@@ -37,29 +37,29 @@ sdk->generate(std::cout);
 ```
 Will produce the following output:
 ```
-// Sdk.hpp
+// Usage.hpp
 
 #pragma once
+
+namespace foobar {
+    class Foo;
+    class Bar;
+
+} // namespace foobar
 
 #pragma pack(push, 1)
 
 namespace foobar {
-class Foo;
-class Bar;
+    class Foo {
+    public:
+        int a; // 0x0
+        float b; // 0x4
+    }; // Size: 0x8
 
-} // namespace foobar
-
-namespace foobar {
-class Foo {
-public:
-    int a; // 0x0
-    float b; // 0x4
-}; // Size: 0x8
-
-class Bar : public Foo {
-public:
-    int c; // 0x8
-}; // Size: 0xc
+    class Bar : public Foo {
+    public:
+        int c; // 0x8
+    }; // Size: 0xc
 
 } // namespace foobar
 

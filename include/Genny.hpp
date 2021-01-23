@@ -777,12 +777,15 @@ public:
     auto namespace_(std::string_view name) { return find_or_add<Namespace>(name); }
 
     virtual void generate_forward_decls(std::ostream& os) const {
-        if (has_any<Enum>() || has_any<Struct>()) {
+        if (has_any<Enum>() || has_any<Struct>() || has_any<Namespace>()) {
             if (!m_name.empty()) {
                 os << "namespace " << m_name << " {\n";
             }
 
-            generate_forward_decls_internal(os);
+            {
+                Indent _{os};
+                generate_forward_decls_internal(os);
+            }
 
             if (!m_name.empty()) {
                 os << "} // namespace " << m_name << "\n\n";
@@ -796,7 +799,10 @@ public:
             os << "namespace " << m_name << " {\n";
         }
 
-        generate_internal(os);
+        {
+            Indent _{os};
+            generate_internal(os);
+        }
 
         if (!m_name.empty()) {
             os << "} // namespace " << m_name << "\n";
@@ -818,6 +824,10 @@ protected:
             }
 
             os << "\n";
+        }
+
+        for (auto&& ns : get_all<Namespace>()) {
+            ns->generate_forward_decls(os);
         }
     }
 
@@ -876,10 +886,6 @@ public:
 
     void generate_forward_decls(std::ostream& os) const override {
         generate_forward_decls_internal(os);
-
-        for (auto&& ns : get_all<Namespace>()) {
-            ns->generate_forward_decls(os);
-        }
     }
 
     void generate(std::ostream& os) const override {
