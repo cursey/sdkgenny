@@ -550,6 +550,12 @@ class VirtualFunction : public Function {
 public:
     VirtualFunction(std::string_view name) : Function{name} {}
 
+    auto vtable_index() const { return m_vtable_index; }
+    auto vtable_index(int vtable_index) {
+        m_vtable_index = vtable_index;
+        return this;
+    }
+
     void generate(std::ostream& os) const override {
         os << "virtual ";
         generate_prototype(os);
@@ -560,6 +566,9 @@ public:
             generate_procedure(os);
         }
     }
+
+protected:
+    int m_vtable_index{};
 };
 
 class Enum : public Type {
@@ -801,15 +810,36 @@ protected:
         }
 
         if (has_any<Function>()) {
-            os << "\n";
+            // Generate normal functions normally.
+            for (auto&& child : get_all<Function>()) {
+                if (!child->is_a<VirtualFunction>()) {
+                    child->generate(os);
+                }
+            }
+        }
 
-            // Generate a default destructor to force addition of the vtable ptr.
-            if (has_any<VirtualFunction>()) {
-                os << "virtual ~" << m_name << "() = default;\n";
+        if (has_any<VirtualFunction>()) {
+            std::unordered_map<int, VirtualFunction*> vtable{};
+            auto max_vtable_index = 0;
+
+            for (auto&& child : get_all<VirtualFunction>()) {
+                auto vtable_index = child->vtable_index();
+
+                vtable[vtable_index] = child;
+                max_vtable_index = std::max(max_vtable_index, vtable_index);
             }
 
-            for (auto&& child : get_all<Function>()) {
-                child->generate(os);
+            for (auto vtable_index = 0; vtable_index <= max_vtable_index; ++vtable_index) {
+                if (auto search = vtable.find(vtable_index); search != vtable.end()) {
+                    search->second->generate(os);
+                } else {
+                    // Generate a default destructor to force addition of the vtable ptr.
+                    if (vtable_index == 0) {
+                        os << "virtual ~" << m_name << "() = default;\n";
+                    } else {
+                        os << "virtual void virtual_function_" << std::dec << vtable_index << "() = 0;\n";
+                    }
+                }
             }
         }
     }

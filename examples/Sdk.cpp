@@ -108,7 +108,7 @@ int main(int argc, char* argv[]) {
     car(g->namespace_("car"));
     usage(g->namespace_("usage"));
 
-    auto drive = BAClass->virtual_function("car_at_pos");
+    auto drive = BAClass->virtual_function("car_at_pos")->vtable_index(5);
     drive->returns(g->namespace_("car")->class_("Car")->ptr());
     drive->param("pos")->type(g->struct_("Vec3")->ref());
 
