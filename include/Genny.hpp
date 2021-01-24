@@ -723,6 +723,20 @@ public:
 protected:
     Struct* m_parent{};
 
+    int vtable_size() const {
+        auto max_index = -1;
+
+        if (m_parent != nullptr) {
+            max_index = m_parent->vtable_size();
+        }
+
+        for (auto&& child : get_all<VirtualFunction>()) {
+            max_index = std::max(max_index, child->vtable_index());
+        }
+
+        return max_index + 1;
+    }
+
     template <typename T, typename... TArgs> T* find_or_add_unique(std::string_view name, TArgs... args) {
         if (auto search = find<T>(name); search != nullptr) {
             return search;
@@ -833,16 +847,21 @@ protected:
 
         if (has_any<VirtualFunction>()) {
             std::unordered_map<int, VirtualFunction*> vtable{};
-            auto max_vtable_index = 0;
 
             for (auto&& child : get_all<VirtualFunction>()) {
                 auto vtable_index = child->vtable_index();
 
                 vtable[vtable_index] = child;
-                max_vtable_index = std::max(max_vtable_index, vtable_index);
             }
 
-            for (auto vtable_index = 0; vtable_index <= max_vtable_index; ++vtable_index) {
+            auto vtable_index = 0;
+            auto vtbl_size = vtable_size();
+
+            if (m_parent != nullptr) {
+                vtable_index = m_parent->vtable_size();
+            }
+
+            for (; vtable_index < vtbl_size; ++vtable_index) {
                 if (auto search = vtable.find(vtable_index); search != vtable.end()) {
                     search->second->generate(os);
                 } else {
