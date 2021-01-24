@@ -186,8 +186,6 @@ protected:
     }
 
     template <typename T> bool is_child_of(T* obj) const {
-        auto o = owners<T>();
-
         for (auto&& owner : owners<T>()) {
             if (owner == obj) {
                 return true;
