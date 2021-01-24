@@ -1061,10 +1061,32 @@ public:
 
     auto global_ns() const { return m_global_ns.get(); }
 
+    auto preamble(std::string_view preamble) {
+        m_preamble = preamble;
+        return this;
+    }
+    auto postamble(std::string_view postamble) {
+        m_postamble = postamble;
+        return this;
+    }
+
+    auto include(std::string_view header) {
+        m_includes.emplace(header);
+        return this;
+    }
+    auto include_local(std::string_view header) {
+        m_local_includes.emplace(header);
+        return this;
+    }
+
     void generate(const std::filesystem::path& sdk_path) const { generate_namespace(sdk_path, m_global_ns.get()); }
 
 protected:
     std::unique_ptr<Namespace> m_global_ns{std::make_unique<Namespace>("")};
+    std::string m_preamble{};
+    std::string m_postamble{};
+    std::set<std::string> m_includes{};
+    std::set<std::string> m_local_includes{};
 
     std::filesystem::path include_path_for_object(Object* obj) const {
         std::filesystem::path path{};
@@ -1099,7 +1121,28 @@ protected:
             std::filesystem::create_directories(obj_path.parent_path());
             std::ofstream os{obj_path};
 
+            if (!m_preamble.empty()) {
+                std::istringstream sstream{m_preamble};
+                std::string line{};
+
+                while (std::getline(sstream, line)) {
+                    os << "// " << line << "\n";
+                }
+            }
+
             os << "#pragma once\n";
+
+            if (!m_includes.empty()) {
+                for (auto&& include : m_includes) {
+                    os << "#include <" << include << ">\n";
+                }
+            }
+
+            if (!m_local_includes.empty()) {
+                for (auto&& include : m_local_includes) {
+                    os << "#include \"" << include << "\"\n";
+                }
+            }
 
             std::unordered_set<Variable*> variables{};
             std::unordered_set<Function*> functions{};
@@ -1212,6 +1255,17 @@ protected:
 
             if (owners.size() > 1) {
                 os << "}\n";
+            }
+
+            if (!m_postamble.empty()) {
+                os << "\n";
+
+                std::istringstream sstream{m_postamble};
+                std::string line{};
+
+                while (std::getline(sstream, line)) {
+                    os << "// " << line << "\n";
+                }
             }
         }
     }

@@ -82,6 +82,8 @@ int main(int argc, char* argv[]) {
     genny::Sdk sdk{};
     auto g = sdk.global_ns();
 
+    sdk.include("cstdint")->include("vector");
+
     g->type("bool")->size(1);
     g->type("char")->size(1);
     g->type("short")->size(2);
@@ -112,7 +114,7 @@ int main(int argc, char* argv[]) {
     drive->returns(g->namespace_("car")->class_("Car")->ptr());
     drive->param("pos")->type(g->struct_("Vec3")->ref());
 
-    auto cclasses = g->generic_type("std::vector<CClass*>");
+    auto cclasses = g->generic_type("std::vector<c::CClass*>");
     cclasses->template_type(CClass->ptr());
     cclasses->size(sizeof(std::vector<void*>));
 
