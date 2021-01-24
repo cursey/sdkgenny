@@ -542,7 +542,10 @@ protected:
                 Indent _{os};
                 os << m_procedure;
             }
-            os << "\n}\n";
+            if (m_procedure.back() != '\n') {
+                os << "\n";
+            }
+            os << "}\n";
         }
     }
 };

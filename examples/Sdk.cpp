@@ -111,7 +111,7 @@ int main(int argc, char* argv[]) {
 
     auto say_hi = CClass->static_function("say_hi");
     say_hi->returns(g->type("int"));
-    say_hi->procedure("std::cout << \"hi\\n\"; return 1;");
+    say_hi->procedure("std::cout << \"hi\\n\";\nreturn 1;");
 
     auto drive = BAClass->virtual_function("car_at_pos")->vtable_index(5);
     drive->returns(g->namespace_("car")->class_("Car")->ptr());
