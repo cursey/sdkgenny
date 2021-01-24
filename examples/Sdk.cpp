@@ -110,7 +110,13 @@ int main(int argc, char* argv[]) {
 
     auto drive = BAClass->virtual_function("car_at_pos");
     drive->returns(g->namespace_("car")->class_("Car")->ptr());
-    drive->param("pos")->type(g->struct_("Vec3"));
+    drive->param("pos")->type(g->struct_("Vec3")->ref());
+
+    auto cclasses = g->generic_type("std::vector<CClass*>");
+    cclasses->template_type(CClass->ptr());
+    cclasses->size(sizeof(std::vector<void*>));
+
+    drive->param("cclasses")->type(cclasses->ptr());
 
     auto sdk_path = std::filesystem::current_path() / "example_sdk";
     std::filesystem::remove_all(sdk_path);

@@ -18,6 +18,7 @@
 namespace genny {
 
 class Type;
+class Reference;
 class Pointer;
 class Struct;
 class Class;
@@ -237,15 +238,16 @@ public:
         return this;
     }
 
+    Reference* ref();
     Pointer* ptr();
 
 protected:
     size_t m_size{};
 };
 
-class Pointer : public Type {
+class Reference : public Type {
 public:
-    Pointer(std::string_view name) : Type{name} {}
+    Reference(std::string_view name) : Type{name} {}
 
     auto to() const { return m_to; }
     auto to(Type* to) {
@@ -253,21 +255,47 @@ public:
         return this;
     }
 
-    auto ptr() { return m_owner->find_or_add<Pointer>(m_name + '*')->to(this); }
-
     size_t size() const override { return sizeof(uintptr_t); }
+
     void generate_typename_for(std::ostream& os, const Object* obj) const override {
         m_to->generate_typename_for(os, obj);
-        os << "*";
+        os << "&";
     }
 
 protected:
     Type* m_to;
 };
 
-inline Pointer* Type::ptr() {
-    return m_owner->find_or_add<Pointer>(m_name + '*')->to(this);
+inline Reference* Type::ref() {
+    return m_owner->find_or_add<Reference>(name() + '&')->to(this);
 }
+
+class Pointer : public Reference {
+public:
+    Pointer(std::string_view name) : Reference{name} {}
+
+    auto ptr() { return m_owner->find_or_add<Pointer>(m_name + '*')->to(this); }
+
+    void generate_typename_for(std::ostream& os, const Object* obj) const override {
+        m_to->generate_typename_for(os, obj);
+        os << "*";
+    }
+};
+
+inline Pointer* Type::ptr() {
+    return (Pointer*)m_owner->find_or_add<Pointer>(name() + '*')->to(this);
+}
+
+class GenericType : public Type {
+public:
+    GenericType(std::string_view name) : Type{name} {}
+
+    auto template_types() const { return m_template_types; }
+    auto template_type(Type* type) { m_template_types.emplace(type); }
+
+protected:
+    std::unordered_set<Type*> m_template_types{};
+};
 
 class Variable : public Object {
 public:
@@ -808,6 +836,7 @@ public:
     Namespace(std::string_view name) : Typename{name} {}
 
     auto type(std::string_view name) { return find_in_owners_or_add<Type>(name); }
+    auto generic_type(std::string_view name) { return find_in_owners_or_add<GenericType>(name); }
     auto struct_(std::string_view name) { return find_or_add<Struct>(name); }
     auto class_(std::string_view name) { return find_or_add<Class>(name); }
     auto enum_(std::string_view name) { return find_or_add<Enum>(name); }
@@ -1046,12 +1075,20 @@ protected:
             std::unordered_set<Function*> functions{};
             std::unordered_set<Type*> types_to_include{};
             std::unordered_set<Struct*> structs_to_forward_decl{};
-            auto add_type = [&](Type* t) {
-                if (auto ptr = dynamic_cast<Pointer*>(t)) {
-                    if (auto s = dynamic_cast<Struct*>(ptr->to())) {
-                        structs_to_forward_decl.emplace(s);
-                    } else if (auto e = dynamic_cast<Enum*>(ptr->to())) {
+            std::function<void(Type*)> add_type = [&](Type* t) {
+                if (auto ref = dynamic_cast<Reference*>(t)) {
+                    auto to = ref->to();
+
+                    if (auto e = dynamic_cast<Enum*>(to)) {
                         types_to_include.emplace(e);
+                    } else if (auto s = dynamic_cast<Struct*>(to)) {
+                        structs_to_forward_decl.emplace(s);
+                    } else {
+                        add_type(to);
+                    }
+                } else if (auto gt = dynamic_cast<GenericType*>(t)) {
+                    for (auto&& tt : gt->template_types()) {
+                        add_type(tt);
                     }
                 } else if (auto e = dynamic_cast<Enum*>(t)) {
                     types_to_include.emplace(e);
