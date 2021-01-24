@@ -1132,16 +1132,12 @@ protected:
 
             os << "#pragma once\n";
 
-            if (!m_includes.empty()) {
-                for (auto&& include : m_includes) {
-                    os << "#include <" << include << ">\n";
-                }
+            for (auto&& include : m_includes) {
+                os << "#include <" << include << ">\n";
             }
 
-            if (!m_local_includes.empty()) {
-                for (auto&& include : m_local_includes) {
-                    os << "#include \"" << include << "\"\n";
-                }
+            for (auto&& include : m_local_includes) {
+                os << "#include \"" << include << "\"\n";
             }
 
             std::unordered_set<Variable*> variables{};
@@ -1258,8 +1254,6 @@ protected:
             }
 
             if (!m_postamble.empty()) {
-                os << "\n";
-
                 std::istringstream sstream{m_postamble};
                 std::string line{};
 
@@ -1271,7 +1265,6 @@ protected:
     }
 
     void generate_namespace(const std::filesystem::path& sdk_path, Namespace* ns) const {
-
         generate<Enum>(sdk_path, ns);
         generate<Struct>(sdk_path, ns);
 
