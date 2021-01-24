@@ -89,6 +89,58 @@ public:
         return owners;
     }
 
+    template <typename T> std::vector<T*> get_all() const {
+        std::vector<T*> children{};
+
+        for (auto&& child : m_children) {
+            if (child->is_a<T>()) {
+                children.emplace_back((T*)child.get());
+            }
+        }
+
+        return children;
+    }
+
+    template <typename T> void get_all_in_children(std::unordered_set<T*>& objects) const {
+        if (is_a<T>()) {
+            objects.emplace((T*)this);
+        }
+
+        for (auto&& child : m_children) {
+            child->get_all_in_children(objects);
+        }
+    }
+
+    template <typename T> bool has_any() const {
+        for (auto&& child : m_children) {
+            if (child->is_a<T>()) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    template <typename T> bool has_any_in_children() const {
+        for (auto&& child : m_children) {
+            if (child->is_a<T>() || child->has_any_in_children<T>()) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    template <typename T> bool is_child_of(T* obj) const {
+        for (auto&& owner : owners<T>()) {
+            if (owner == obj) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
 protected:
     friend class Type;
     friend class Pointer;
@@ -141,58 +193,6 @@ protected:
         }
 
         return add(std::make_unique<T>(name, args...));
-    }
-
-    template <typename T> std::vector<T*> get_all() const {
-        std::vector<T*> children{};
-
-        for (auto&& child : m_children) {
-            if (child->is_a<T>()) {
-                children.emplace_back((T*)child.get());
-            }
-        }
-
-        return children;
-    }
-
-    template <typename T> void get_all_in_children(std::unordered_set<T*>& objects) const {
-        if (is_a<T>()) {
-            objects.emplace((T*)this);
-        }
-
-        for (auto&& child : m_children) {
-            child->get_all_in_children(objects);
-        }
-    }
-
-    template <typename T> bool has_any() const {
-        for (auto&& child : m_children) {
-            if (child->is_a<T>()) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    template <typename T> bool has_any_in_children() const {
-        for (auto&& child : m_children) {
-            if (child->is_a<T>() || child->has_any_in_children<T>()) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    template <typename T> bool is_child_of(T* obj) const {
-        for (auto&& owner : owners<T>()) {
-            if (owner == obj) {
-                return true;
-            }
-        }
-
-        return false;
     }
 };
 
