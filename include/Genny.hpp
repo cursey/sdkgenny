@@ -572,6 +572,17 @@ protected:
     int m_vtable_index{};
 };
 
+class StaticFunction : public Function {
+public:
+    StaticFunction(std::string_view name) : Function{name} {}
+
+    void generate(std::ostream& os) const override {
+        os << "static ";
+        generate_prototype(os);
+        generate_procedure(os);
+    }
+};
+
 class Enum : public Type {
 public:
     Enum(std::string_view name) : Type{name} {}
@@ -665,6 +676,7 @@ public:
     auto enum_class(std::string_view name) { return find_or_add_unique<EnumClass>(name); }
     auto function(std::string_view name) { return find_or_add_unique<Function>(name); }
     auto virtual_function(std::string_view name) { return find_or_add_unique<VirtualFunction>(name); }
+    auto static_function(std::string_view name) { return find_or_add<StaticFunction>(name); }
 
     auto parent() const { return m_parent; }
     auto parent(Struct* parent) {

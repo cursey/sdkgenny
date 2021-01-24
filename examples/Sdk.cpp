@@ -106,9 +106,12 @@ int main(int argc, char* argv[]) {
     CClass->variable("a_enum")->offset(CClass->variable("ba_class")->end())->type(AEnum);
     CClass->variable("ba_class_2")->offset(CClass->variable("a_enum")->end())->type(BAClass->ptr()->ptr()->ptr());
 
-
     car(g->namespace_("car"));
     usage(g->namespace_("usage"));
+
+    auto say_hi = CClass->static_function("say_hi");
+    say_hi->returns(g->type("int"));
+    say_hi->procedure("std::cout << \"hi\\n\"; return 1;");
 
     auto drive = BAClass->virtual_function("car_at_pos")->vtable_index(5);
     drive->returns(g->namespace_("car")->class_("Car")->ptr());
