@@ -289,7 +289,10 @@ public:
     GenericType(std::string_view name) : Type{name} {}
 
     auto template_types() const { return m_template_types; }
-    auto template_type(Type* type) { m_template_types.emplace(type); }
+    auto template_type(Type* type) {
+        m_template_types.emplace(type);
+        return this;
+    }
 
 protected:
     std::unordered_set<Type*> m_template_types{};
