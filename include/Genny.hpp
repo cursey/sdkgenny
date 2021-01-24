@@ -261,7 +261,7 @@ public:
     }
 
 protected:
-    Type* m_to;
+    Type* m_to{};
 };
 
 inline Reference* Type::ref() {
