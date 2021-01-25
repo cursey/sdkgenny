@@ -212,7 +212,7 @@ public:
 
     virtual void generate_typename_for(std::ostream& os, const Object* obj) const {
         if (auto owner_type = owner<Typename>()) {
-            if (owner_type != obj->owner<Typename>()) {
+            if (obj == nullptr || owner_type != obj->owner<Typename>()) {
                 auto&& name = owner_type->get_typename();
 
                 if (!name.empty()) {
@@ -494,20 +494,31 @@ public:
         return this;
     }
 
-    auto procedure() const { return m_procedure; }
+    auto&& procedure() const { return m_procedure; }
     auto procedure(std::string_view procedure) {
         m_procedure = procedure;
         return this;
     }
 
+    auto&& dependent_types() const { return m_dependent_types; }
+    auto depends_on(Type* type) {
+        m_dependent_types.emplace(type);
+        return this;
+    }
+
     virtual void generate(std::ostream& os) const {
         generate_prototype(os);
+        os << ";\n";
+    }
+
+    virtual void generate_source(std::ostream& os) const {
         generate_procedure(os);
     }
 
 protected:
     Type* m_return_value{};
     std::string m_procedure{};
+    std::unordered_set<Type*> m_dependent_types{};
 
     void generate_prototype(std::ostream& os) const {
         if (m_return_value == nullptr) {
@@ -516,7 +527,12 @@ protected:
             m_return_value->generate_typename_for(os, this);
         }
 
-        os << " " << m_name << "(";
+        os << " ";
+        generate_prototype_internal(os);
+    }
+
+    void generate_prototype_internal(std::ostream& os) const {
+        os << m_name << "(";
 
         auto is_first_param = true;
 
@@ -534,6 +550,15 @@ protected:
     }
 
     void generate_procedure(std::ostream& os) const {
+        if (m_return_value == nullptr) {
+            os << "void";
+        } else {
+            m_return_value->generate_typename_for(os, nullptr);
+        }
+
+        os << " " << owner<Object>()->name() << "::";
+        generate_prototype_internal(os);
+
         if (m_procedure.empty()) {
             os << " {}\n";
         } else {
@@ -566,8 +591,6 @@ public:
 
         if (m_procedure.empty()) {
             os << " = 0;\n";
-        } else {
-            generate_procedure(os);
         }
     }
 
@@ -582,7 +605,7 @@ public:
     void generate(std::ostream& os) const override {
         os << "static ";
         generate_prototype(os);
-        generate_procedure(os);
+        os << ";\n";
     }
 };
 
@@ -1123,7 +1146,7 @@ protected:
     std::set<std::string> m_includes{};
     std::set<std::string> m_local_includes{};
 
-    std::filesystem::path include_path_for_object(Object* obj) const {
+    std::filesystem::path path_for_object(Object* obj) const {
         std::filesystem::path path{};
         auto owners = obj->owners<Namespace>();
 
@@ -1138,164 +1161,284 @@ protected:
         }
 
         path /= obj->name();
-        path += ".hpp";
 
+        return path;
+    }
+
+    std::filesystem::path include_path_for_object(Object* obj) const {
+        auto path = path_for_object(obj);
+        path += ".hpp";
+        return path;
+    }
+
+    std::filesystem::path source_path_for_object(Object* obj) const {
+        auto path = path_for_object(obj);
+        path += ".cpp";
         return path;
     }
 
     std::filesystem::path include_path(Object* from, Object* to) const {
         auto to_path = include_path_for_object(to);
         auto from_path = include_path_for_object(from);
-
         return std::filesystem::relative(to_path.parent_path(), from_path.parent_path()) / to_path.filename();
+    }
+
+    template <typename T> void generate_header(const std::filesystem::path& sdk_path, T* obj) const {
+        auto obj_inc_path = sdk_path / include_path_for_object(obj);
+        std::filesystem::create_directories(obj_inc_path.parent_path());
+        std::ofstream os{obj_inc_path};
+
+        if (!m_preamble.empty()) {
+            std::istringstream sstream{m_preamble};
+            std::string line{};
+
+            while (std::getline(sstream, line)) {
+                os << "// " << line << "\n";
+            }
+        }
+
+        os << "#pragma once\n";
+
+        for (auto&& include : m_includes) {
+            os << "#include <" << include << ">\n";
+        }
+
+        for (auto&& include : m_local_includes) {
+            os << "#include \"" << include << "\"\n";
+        }
+
+        std::unordered_set<Variable*> variables{};
+        std::unordered_set<Function*> functions{};
+        std::unordered_set<Type*> types_to_include{};
+        std::unordered_set<Struct*> structs_to_forward_decl{};
+        std::function<void(Type*)> add_type = [&](Type* t) {
+            if (auto ref = dynamic_cast<Reference*>(t)) {
+                auto to = ref->to();
+
+                if (auto e = dynamic_cast<Enum*>(to)) {
+                    types_to_include.emplace(e);
+                } else if (auto s = dynamic_cast<Struct*>(to)) {
+                    structs_to_forward_decl.emplace(s);
+                } else {
+                    add_type(to);
+                }
+            } else if (auto gt = dynamic_cast<GenericType*>(t)) {
+                for (auto&& tt : gt->template_types()) {
+                    add_type(tt);
+                }
+            } else if (auto e = dynamic_cast<Enum*>(t)) {
+                types_to_include.emplace(e);
+            } else if (auto s = dynamic_cast<Struct*>(t)) {
+                types_to_include.emplace(s);
+            }
+        };
+
+        obj->get_all_in_children<Variable>(variables);
+        obj->get_all_in_children<Function>(functions);
+
+        for (auto&& var : variables) {
+            add_type(var->type());
+        }
+
+        for (auto&& fn : functions) {
+            for (auto&& param : fn->get_all<Parameter>()) {
+                add_type(param->type());
+            }
+            add_type(fn->returns());
+        }
+
+        if (auto s = dynamic_cast<Struct*>(obj)) {
+            if (auto parent = s->parent()) {
+                types_to_include.emplace(parent);
+            }
+        }
+
+        for (auto&& type : types_to_include) {
+            if (!type->is_child_of(obj)) {
+                os << "#include \"" << include_path(obj, type).string() << "\"\n";
+            }
+        }
+
+        for (auto&& type : structs_to_forward_decl) {
+            // Only forward decl structs we haven't already included.
+            if (types_to_include.find(type) == types_to_include.end() && !type->is_child_of(obj)) {
+                auto owners = type->owners<Namespace>();
+
+                if (owners.size() > 1) {
+                    std::reverse(owners.begin(), owners.end());
+
+                    os << "namespace ";
+
+                    for (auto&& owner : owners) {
+                        if (owner->name().empty()) {
+                            continue;
+                        }
+
+                        os << owner->name();
+
+                        if (owner != owners.back()) {
+                            os << "::";
+                        }
+                    }
+
+                    os << " {\n";
+                }
+
+                type->generate_forward_decl(os);
+
+                if (owners.size() > 1) {
+                    os << "}\n";
+                }
+            }
+        }
+
+        auto owners = obj->owners<Namespace>();
+
+        if (owners.size() > 1) {
+            std::reverse(owners.begin(), owners.end());
+
+            os << "namespace ";
+
+            for (auto&& owner : owners) {
+                if (owner->name().empty()) {
+                    continue;
+                }
+
+                os << owner->name();
+
+                if (owner != owners.back()) {
+                    os << "::";
+                }
+            }
+
+            os << " {\n";
+        }
+
+        obj->generate(os);
+
+        if (owners.size() > 1) {
+            os << "}\n";
+        }
+
+        if (!m_postamble.empty()) {
+            std::istringstream sstream{m_postamble};
+            std::string line{};
+
+            while (std::getline(sstream, line)) {
+                os << "// " << line << "\n";
+            }
+        }
+    }
+
+    template <typename T> void generate_source(const std::filesystem::path& sdk_path, T* obj) const { 
+        if (!obj->has_any<Function>()) {
+            return;
+        }
+
+        auto obj_src_path = sdk_path / source_path_for_object(obj);
+        std::filesystem::create_directories(obj_src_path.parent_path());
+        std::ofstream os{obj_src_path};
+
+        if (!m_preamble.empty()) {
+            std::istringstream sstream{m_preamble};
+            std::string line{};
+
+            while (std::getline(sstream, line)) {
+                os << "// " << line << "\n";
+            }
+        }
+
+        std::unordered_set<Variable*> variables{};
+        std::unordered_set<Function*> functions{};
+        std::unordered_set<Type*> types_to_include{};
+        std::function<void(Type*)> add_type = [&](Type* t) {
+            if (auto ref = dynamic_cast<Reference*>(t)) {
+                auto to = ref->to();
+
+                if (auto e = dynamic_cast<Enum*>(to)) {
+                    types_to_include.emplace(e);
+                } else if (auto s = dynamic_cast<Struct*>(to)) {
+                    types_to_include.emplace(s);
+                } else {
+                    add_type(to);
+                }
+            } else if (auto gt = dynamic_cast<GenericType*>(t)) {
+                for (auto&& tt : gt->template_types()) {
+                    add_type(tt);
+                }
+            } else if (auto e = dynamic_cast<Enum*>(t)) {
+                types_to_include.emplace(e);
+            } else if (auto s = dynamic_cast<Struct*>(t)) {
+                types_to_include.emplace(s);
+            }
+        };
+
+        if (obj->is_a<Type>()) {
+            add_type(obj);
+        }
+
+        obj->get_all_in_children<Function>(functions);
+
+        for (auto&& fn : functions) {
+            for (auto&& param : fn->get_all<Parameter>()) {
+                add_type(param->type());
+            }
+            for (auto&& dependent : fn->dependent_types()) {
+                add_type(dependent);
+            }
+            add_type(fn->returns());
+        }
+
+        for (auto&& type : types_to_include) {
+            if (!type->is_child_of(obj)) {
+                os << "#include \"" << include_path(obj, type).string() << "\"\n";
+            }
+        }
+
+        auto owners = obj->owners<Namespace>();
+
+        if (owners.size() > 1) {
+            std::reverse(owners.begin(), owners.end());
+
+            os << "namespace ";
+
+            for (auto&& owner : owners) {
+                if (owner->name().empty()) {
+                    continue;
+                }
+
+                os << owner->name();
+
+                if (owner != owners.back()) {
+                    os << "::";
+                }
+            }
+
+            os << " {\n";
+        }
+
+        for (auto&& fn : functions) {
+            fn->generate_source(os);
+        }
+
+        if (owners.size() > 1) {
+            os << "}\n";
+        }
+
+        if (!m_postamble.empty()) {
+            std::istringstream sstream{m_postamble};
+            std::string line{};
+
+            while (std::getline(sstream, line)) {
+                os << "// " << line << "\n";
+            }
+        }
     }
 
     template <typename T> void generate(const std::filesystem::path& sdk_path, Namespace* ns) const {
         for (auto&& obj : ns->get_all<T>()) {
-            auto obj_path = sdk_path / include_path_for_object(obj);
-            std::filesystem::create_directories(obj_path.parent_path());
-            std::ofstream os{obj_path};
-
-            if (!m_preamble.empty()) {
-                std::istringstream sstream{m_preamble};
-                std::string line{};
-
-                while (std::getline(sstream, line)) {
-                    os << "// " << line << "\n";
-                }
-            }
-
-            os << "#pragma once\n";
-
-            for (auto&& include : m_includes) {
-                os << "#include <" << include << ">\n";
-            }
-
-            for (auto&& include : m_local_includes) {
-                os << "#include \"" << include << "\"\n";
-            }
-
-            std::unordered_set<Variable*> variables{};
-            std::unordered_set<Function*> functions{};
-            std::unordered_set<Type*> types_to_include{};
-            std::unordered_set<Struct*> structs_to_forward_decl{};
-            std::function<void(Type*)> add_type = [&](Type* t) {
-                if (auto ref = dynamic_cast<Reference*>(t)) {
-                    auto to = ref->to();
-
-                    if (auto e = dynamic_cast<Enum*>(to)) {
-                        types_to_include.emplace(e);
-                    } else if (auto s = dynamic_cast<Struct*>(to)) {
-                        structs_to_forward_decl.emplace(s);
-                    } else {
-                        add_type(to);
-                    }
-                } else if (auto gt = dynamic_cast<GenericType*>(t)) {
-                    for (auto&& tt : gt->template_types()) {
-                        add_type(tt);
-                    }
-                } else if (auto e = dynamic_cast<Enum*>(t)) {
-                    types_to_include.emplace(e);
-                } else if (auto s = dynamic_cast<Struct*>(t)) {
-                    types_to_include.emplace(s);
-                }
-            };
-
-            obj->get_all_in_children<Variable>(variables);
-            obj->get_all_in_children<Function>(functions);
-
-            for (auto&& var : variables) {
-                add_type(var->type());
-            }
-
-            for (auto&& fn : functions) {
-                for (auto&& param : fn->get_all<Parameter>()) {
-                    add_type(param->type());
-                }
-                add_type(fn->returns());
-            }
-
-            if (auto s = dynamic_cast<Struct*>(obj)) {
-                if (auto parent = s->parent()) {
-                    types_to_include.emplace(parent);
-                }
-            }
-
-            for (auto&& type : types_to_include) {
-                if (!type->is_child_of(obj)) {
-                    os << "#include \"" << include_path(obj, type).string() << "\"\n";
-                }
-            }
-
-            for (auto&& type : structs_to_forward_decl) {
-                // Only forward decl structs we haven't already included.
-                if (types_to_include.find(type) == types_to_include.end() && !type->is_child_of(obj)) {
-                    auto owners = type->owners<Namespace>();
-
-                    if (owners.size() > 1) {
-                        std::reverse(owners.begin(), owners.end());
-
-                        os << "namespace ";
-
-                        for (auto&& owner : owners) {
-                            if (owner->name().empty()) {
-                                continue;
-                            }
-
-                            os << owner->name();
-
-                            if (owner != owners.back()) {
-                                os << "::";
-                            }
-                        }
-
-                        os << " {\n";
-                    }
-
-                    type->generate_forward_decl(os);
-
-                    if (owners.size() > 1) {
-                        os << "}\n";
-                    }
-                }
-            }
-
-            auto owners = obj->owners<Namespace>();
-
-            if (owners.size() > 1) {
-                std::reverse(owners.begin(), owners.end());
-
-                os << "namespace ";
-
-                for (auto&& owner : owners) {
-                    if (owner->name().empty()) {
-                        continue;
-                    }
-
-                    os << owner->name();
-
-                    if (owner != owners.back()) {
-                        os << "::";
-                    }
-                }
-
-                os << " {\n";
-            }
-
-            obj->generate(os);
-
-            if (owners.size() > 1) {
-                os << "}\n";
-            }
-
-            if (!m_postamble.empty()) {
-                std::istringstream sstream{m_postamble};
-                std::string line{};
-
-                while (std::getline(sstream, line)) {
-                    os << "// " << line << "\n";
-                }
-            }
+            generate_header(sdk_path, obj);
+            generate_source(sdk_path, obj);
         }
     }
 
