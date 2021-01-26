@@ -1331,6 +1331,7 @@ protected:
     }
 
     template <typename T> void generate_source(const std::filesystem::path& sdk_path, T* obj) const { 
+        // Skip generating a source file for an object with no functions.
         if (!obj->has_any<Function>()) {
             return;
         }
@@ -1418,6 +1419,11 @@ protected:
         }
 
         for (auto&& fn : functions) {
+            // Skip pure virtual functions.
+            if (fn->is_a<VirtualFunction>() && fn->procedure().empty()) {
+                continue;
+            }
+
             fn->generate_source(os);
         }
 
