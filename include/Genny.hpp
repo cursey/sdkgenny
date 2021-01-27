@@ -422,7 +422,7 @@ public:
 
                 if (offset - last_offset > 0) {
                     m_type->generate_typename_for(os, this);
-                    os << " bitfield_pad_" << std::hex << last_offset << " : " << std::dec << offset - last_offset
+                    os << " " << name() << "_pad_" << std::hex << last_offset << " : " << std::dec << offset - last_offset
                        << ";\n";
                 }
 
