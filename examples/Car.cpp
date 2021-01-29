@@ -1,5 +1,4 @@
 #include <cassert>
-#include <iostream>
 
 #include <Genny.hpp>
 
@@ -27,10 +26,11 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.)";
 
 int main(int argc, char* argv[]) {
-    auto g = std::make_unique<genny::HeaderFile>("Car.hpp");
+    genny::Sdk sdk{};
+    auto g = sdk.global_ns();
 
-    g->preamble(PREAMBLE)->postamble("End of Car.hpp");
-    g->include("cstdint")->include_local("Types.hpp");
+    sdk.preamble(PREAMBLE)->postamble("End of file");
+    sdk.include("cstdint")->include_local("Types.hpp");
 
     g->type("bool")->size(1);
     g->type("char")->size(1);
@@ -82,9 +82,9 @@ int main(int argc, char* argv[]) {
 
     // Name collision will occur. Will have a number appended in the output.
     two_door->variable("weight")->type(g->type("long"))->offset(120);
-    assert(two_door->owner<genny::Namespace>() == g.get());
+    assert(two_door->owner<genny::Namespace>() == g);
 
-    g->generate(std::cout);
+    sdk.generate(std::filesystem::current_path() / "car_sdk");
 
     return 0;
 }

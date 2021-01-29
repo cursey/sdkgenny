@@ -1,9 +1,8 @@
-#include <iostream>
-
 #include "Genny.hpp"
 
 int main(int argc, char* argv[]) {
-    auto g = std::make_unique<genny::Namespace>("");
+    genny::Sdk sdk{};
+    auto g = sdk.global_ns();
 
     g->type("unsigned short")->size(2);
 
@@ -17,7 +16,7 @@ int main(int argc, char* argv[]) {
     bf->field("nMonth")->offset(bf->field("nMonthDay")->end())->size(5);
     bf->field("nYear")->offset(16)->size(8);
 
-    g->generate(std::cout);
+    sdk.generate(std::filesystem::current_path() / "bitfield_sdk");
 
     return 0;
 }

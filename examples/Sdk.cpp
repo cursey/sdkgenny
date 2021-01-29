@@ -1,7 +1,4 @@
-#include <iostream>
-#include <filesystem>
-
-#include "Genny.hpp"
+#include <Genny.hpp>
 
 void car(genny::Namespace* g) {
     g->type("bool")->size(1);

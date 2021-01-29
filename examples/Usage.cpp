@@ -1,17 +1,18 @@
-#include <iostream>
-
 #include <Genny.hpp>
 
 int main(int argc, char* argv[]) {
-    // Make our SDK's header file.
-    auto sdk = std::make_unique<genny::HeaderFile>("Usage.hpp");
+    // Make an SDK generator.
+    genny::Sdk sdk{};
+
+    // Get the global namespace for the SDK.
+    auto g = sdk.global_ns();
 
     // Add some basic types to the global namespace.
-    sdk->type("int")->size(4);
-    sdk->type("float")->size(4);
+    g->type("int")->size(4);
+    g->type("float")->size(4);
 
     // Make an actual namespace.
-    auto ns = sdk->namespace_("foobar");
+    auto ns = g->namespace_("foobar");
 
     // Make a class in the namespace.
     auto foo = ns->class_("Foo");
@@ -26,8 +27,8 @@ int main(int argc, char* argv[]) {
     // Add a member after 'b'.
     bar->variable("c")->type("int")->offset(foo->variable("b")->end());
 
-    // Generate the sdk.
-    sdk->generate(std::cout);
+    // Generate the SDK to the "usage_sdk" folder.
+    sdk.generate(std::filesystem::current_path() / "usage_sdk");
 
     return 0;
 
