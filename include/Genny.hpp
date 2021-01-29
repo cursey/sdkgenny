@@ -406,7 +406,7 @@ public:
             field_map[field->offset()] = field;
         }
 
-        auto offset = 0;
+        size_t offset = 0;
         auto max_offset = size() * CHAR_BIT;
         auto last_offset = offset;
 
