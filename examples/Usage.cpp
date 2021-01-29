@@ -31,5 +31,4 @@ int main(int argc, char* argv[]) {
     sdk.generate(std::filesystem::current_path() / "usage_sdk");
 
     return 0;
-
 }

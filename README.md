@@ -9,15 +9,18 @@ Copy `Genny.hpp` from the `include/` directory into your project and `#include` 
 ## Usage
 Here is a short example of how to use SdkGenny. This does not showcase every feature. For more examples check the `examples/` directory.
 ```
-// Make our SDK's header file.
-auto sdk = std::make_unique<genny::HeaderFile>("Usage.hpp");
+// Make an SDK generator.
+genny::Sdk sdk{};
+
+// Get the global namespace for the SDK.
+auto g = sdk.global_ns();
 
 // Add some basic types to the global namespace.
-sdk->type("int")->size(4);
-sdk->type("float")->size(4);
+g->type("int")->size(4);
+g->type("float")->size(4);
 
 // Make an actual namespace.
-auto ns = sdk->namespace_("foobar");
+auto ns = g->namespace_("foobar");
 
 // Make a class in the namespace.
 auto foo = ns->class_("Foo");
@@ -32,38 +35,37 @@ auto bar = ns->class_("Bar")->parent(foo);
 // Add a member after 'b'.
 bar->variable("c")->type("int")->offset(foo->variable("b")->end());
 
-// Generate the sdk.
-sdk->generate(std::cout);
+// Generate the SDK to the "usage_sdk" folder.
+sdk.generate(std::filesystem::current_path() / "usage_sdk");
 ```
-Will produce the following output:
-```
-// Usage.hpp
+Will produce the following 2 files
 
+### `foobar/Foo.hpp`
+```
 #pragma once
-
 namespace foobar {
-    class Foo;
-    class Bar;
-
-} // namespace foobar
-
 #pragma pack(push, 1)
-
-namespace foobar {
-    class Foo {
-    public:
-        int a; // 0x0
-        float b; // 0x4
-    }; // Size: 0x8
-
-    class Bar : public Foo {
-    public:
-        int c; // 0x8
-    }; // Size: 0xc
-
-} // namespace foobar
-
+class Foo {
+public:
+    int a; // 0x0
+    float b; // 0x4
+}; // Size: 0x8
 #pragma pack(pop)
+}
+```
+
+### `foobar/Bar.hpp`
+```
+#pragma once
+#include ".\Foo.hpp"
+namespace foobar {
+#pragma pack(push, 1)
+class Bar : public Foo {
+public:
+    int c; // 0x8
+}; // Size: 0xc
+#pragma pack(pop)
+}
 ```
 
 ## License
