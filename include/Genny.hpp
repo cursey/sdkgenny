@@ -1134,7 +1134,9 @@ protected:
             os << " {\n";
         }
 
+        os << "#pragma pack(push, 1)\n";
         obj->generate(os);
+        os << "#pragma pack(pop)\n";
 
         if (owners.size() > 1) {
             os << "}\n";
