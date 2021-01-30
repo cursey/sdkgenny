@@ -907,7 +907,7 @@ class Class : public Struct {
 public:
     Class(std::string_view name) : Struct{name} {}
 
-    void generate_forward_decl(std::ostream& os) const { os << "class " << m_name << ";\n"; }
+    void generate_forward_decl(std::ostream& os) const override { os << "class " << m_name << ";\n"; }
 
     void generate(std::ostream& os) const override {
         os << "class " << m_name;
