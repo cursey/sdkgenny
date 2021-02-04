@@ -120,6 +120,9 @@ int main(int argc, char* argv[]) {
 
     drive->param("cclasses")->type(cclasses->ptr());
 
+    auto nested = CClass->class_("Nested");
+    nested->function("aloha")->procedure("std::cout << \"aloha\\n\";");
+
     auto sdk_path = std::filesystem::current_path() / "example_sdk";
     std::filesystem::remove_all(sdk_path);
     sdk.generate(sdk_path);

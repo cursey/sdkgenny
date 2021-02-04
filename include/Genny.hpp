@@ -556,7 +556,24 @@ protected:
             m_return_value->generate_typename_for(os, nullptr);
         }
 
-        os << " " << owner<Object>()->name() << "::";
+        os << " ";
+
+        std::vector<const Object*> owners{};
+
+        for (auto o = owner<Object>(); o != nullptr; o = o->owner<Object>()) {
+            owners.emplace_back(o);
+        }
+
+        std::reverse(owners.begin(), owners.end());
+
+        for (auto&& o : owners) {
+            if (o->name().empty()) {
+                continue;
+            }
+
+            os << o->name() << "::";
+        }
+
         generate_prototype_internal(os);
 
         if (m_procedure.empty()) {
@@ -1218,7 +1235,7 @@ protected:
             }
         }
 
-        auto owners = obj->owners<Namespace>();
+        /*auto owners = obj->owners<Namespace>();
 
         if (owners.size() > 1) {
             std::reverse(owners.begin(), owners.end());
@@ -1238,7 +1255,7 @@ protected:
             }
 
             os << " {\n";
-        }
+        }*/
 
         for (auto&& fn : functions) {
             // Skip pure virtual functions.
@@ -1249,9 +1266,9 @@ protected:
             fn->generate_source(os);
         }
 
-        if (owners.size() > 1) {
+        /*if (owners.size() > 1) {
             os << "}\n";
-        }
+        }*/
 
         if (!m_postamble.empty()) {
             std::istringstream sstream{m_postamble};
