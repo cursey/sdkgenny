@@ -141,17 +141,6 @@ public:
         return false;
     }
 
-protected:
-    friend class Type;
-    friend class Pointer;
-    friend class Namespace;
-    friend class Sdk;
-
-    Object* m_owner{};
-
-    std::string m_name{};
-    std::vector<std::unique_ptr<Object>> m_children{};
-
     template <typename T> T* add(std::unique_ptr<T> object) {
         object->m_owner = this;
         return (T*)m_children.emplace_back(std::move(object)).get();
@@ -194,6 +183,17 @@ protected:
 
         return add(std::make_unique<T>(name, args...));
     }
+
+protected:
+    friend class Type;
+    friend class Pointer;
+    friend class Namespace;
+    friend class Sdk;
+
+    Object* m_owner{};
+
+    std::string m_name{};
+    std::vector<std::unique_ptr<Object>> m_children{};
 };
 
 template <typename T> T* cast(const Object* object) {
