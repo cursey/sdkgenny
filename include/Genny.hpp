@@ -721,21 +721,20 @@ public:
     auto virtual_function(std::string_view name) { return find_or_add_unique<VirtualFunction>(name); }
     auto static_function(std::string_view name) { return find_or_add<StaticFunction>(name); }
 
-    auto parent() const { return m_parent; }
+    auto&& parents() const { return m_parents; }
     auto parent(Struct* parent) {
-        m_parent = parent;
+        if (std::find(m_parents.begin(), m_parents.end(), parent) == m_parents.end()) {
+            m_parents.emplace_back(parent);
+        }
+
         return this;
     }
 
     size_t size() const override {
-        auto size = m_size;
+        size_t size = 0;
 
-        if (m_parent != nullptr) {
-            size = m_parent->size();
-        }
-
-        if (has_any<VirtualFunction>()) {
-            size += sizeof(uintptr_t);
+        for (auto&& parent : m_parents) {
+            size += parent->size();
         }
 
         for (auto&& var : get_all<Variable>()) {
@@ -746,7 +745,11 @@ public:
             }
         }
 
-        return size;
+        if (size == 0 && has_any<VirtualFunction>()) {
+            size += sizeof(uintptr_t);
+        }
+
+        return std::max(size, m_size);
     }
     auto size(int size) {
         m_size = size;
@@ -764,13 +767,23 @@ public:
     }
 
 protected:
-    Struct* m_parent{};
+    std::vector<Struct*> m_parents{};
 
     int vtable_size() const {
         auto max_index = -1;
 
-        if (m_parent != nullptr) {
-            max_index = m_parent->vtable_size();
+        if (!m_parents.empty()) {
+            max_index = 0;
+
+            for (auto&& parent : m_parents) {
+                if (auto parent_vtable_size = parent->vtable_size(); parent_vtable_size != -1) {
+                    max_index += parent_vtable_size;
+                }
+            }
+
+            if (max_index == 0) {
+                max_index = -1;
+            }
         }
 
         for (auto&& child : get_all<VirtualFunction>()) {
@@ -778,6 +791,16 @@ protected:
         }
 
         return max_index + 1;
+    }
+
+    template <typename T> T* find_in_parents(std::string_view name) {
+        for (auto&& parent : m_parents) {
+            if (auto obj = parent->find<T>(name)) {
+                return obj;
+            }
+        }
+
+        return nullptr;
     }
 
     template <typename T, typename... TArgs> T* find_or_add_unique(std::string_view name, TArgs... args) {
@@ -792,13 +815,11 @@ protected:
         do {
             has_collision = false;
 
-            for (auto parent = m_parent; parent != nullptr; parent = parent->m_parent) {
-                if (m_parent->find<Object>(fixed_name.empty() ? name : fixed_name) != nullptr) {
-                    fixed_name = name;
-                    fixed_name += std::to_string(num_collisions);
-                    ++num_collisions;
-                    has_collision = true;
-                }
+            if (find_in_parents<Object>(fixed_name.empty() ? name : fixed_name) != nullptr) {
+                fixed_name = name;
+                fixed_name += std::to_string(num_collisions);
+                ++num_collisions;
+                has_collision = true;
             }
         } while (has_collision);
 
@@ -810,11 +831,27 @@ protected:
     }
 
     void generate_inheritance(std::ostream& os) const {
-        if (m_parent == nullptr) {
+        /*if (m_parent == nullptr) {
+            return;
+        }*/
+        if (m_parents.empty()) {
             return;
         }
 
-        os << " : public " << m_parent->m_name;
+        os << " : public ";
+
+        bool is_first = true;
+
+        for (auto&& parent : m_parents) {
+            if (is_first) {
+                is_first = false;
+            } else {
+                os << ", ";
+            }
+
+            os << parent->name();
+        }
+        //<< m_parent->m_name;
     }
 
     void generate_internal(std::ostream& os) const {
@@ -845,8 +882,12 @@ protected:
         }
 
         // Start off where the parent ends.
-        if (m_parent != nullptr) {
-            offset = m_parent->size();
+        if (!m_parents.empty()) {
+            offset = 0;
+
+            for (auto&& parent : m_parents) {
+                offset += parent->size();
+            }
         }
 
         auto last_offset = offset;
@@ -899,10 +940,6 @@ protected:
 
             auto vtable_index = 0;
             auto vtbl_size = vtable_size();
-
-            if (m_parent != nullptr) {
-                vtable_index = m_parent->vtable_size();
-            }
 
             for (; vtable_index < vtbl_size; ++vtable_index) {
                 if (auto search = vtable.find(vtable_index); search != vtable.end()) {
@@ -1085,7 +1122,7 @@ protected:
         }
 
         if (auto s = dynamic_cast<Struct*>(obj)) {
-            if (auto parent = s->parent()) {
+            for (auto&& parent : s->parents()) {
                 types_to_include.emplace(parent);
             }
         }

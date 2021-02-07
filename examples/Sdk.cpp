@@ -75,6 +75,18 @@ void usage(genny::Namespace* sdk) {
     bar->variable("c")->type("int")->offset(foo->variable("b")->end());
 }
 
+void multiple_inheritance(genny::Namespace* ns) {
+    auto foo = ns->class_("Foo");
+    foo->variable("a")->offset(8)->type("int");
+
+    auto bar = ns->class_("Bar");
+    bar->variable("b")->offset(16)->type("float");
+
+    auto baz = ns->class_("Baz")->parent(foo)->parent(bar);
+    auto c = baz->variable("c")->offset(foo->size() + bar->size() + 4)->type("long");
+    baz->variable("a")->offset(c->end())->type("double");
+}
+
 int main(int argc, char* argv[]) {
     genny::Sdk sdk{};
     auto g = sdk.global_ns();
@@ -105,6 +117,7 @@ int main(int argc, char* argv[]) {
 
     car(g->namespace_("car"));
     usage(g->namespace_("usage"));
+    multiple_inheritance(g->namespace_("multi"));
 
     auto say_hi = CClass->static_function("say_hi");
     say_hi->returns(g->type("int"));
