@@ -831,14 +831,11 @@ protected:
     }
 
     void generate_inheritance(std::ostream& os) const {
-        /*if (m_parent == nullptr) {
-            return;
-        }*/
         if (m_parents.empty()) {
             return;
         }
 
-        os << " : public ";
+        os << " : ";
 
         bool is_first = true;
 
@@ -849,9 +846,8 @@ protected:
                 os << ", ";
             }
 
-            os << parent->name();
+            os << "public " << parent->name();
         }
-        //<< m_parent->m_name;
     }
 
     void generate_internal(std::ostream& os) const {
