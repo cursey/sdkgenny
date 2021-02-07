@@ -1235,28 +1235,6 @@ protected:
             }
         }
 
-        /*auto owners = obj->owners<Namespace>();
-
-        if (owners.size() > 1) {
-            std::reverse(owners.begin(), owners.end());
-
-            os << "namespace ";
-
-            for (auto&& owner : owners) {
-                if (owner->name().empty()) {
-                    continue;
-                }
-
-                os << owner->name();
-
-                if (owner != owners.back()) {
-                    os << "::";
-                }
-            }
-
-            os << " {\n";
-        }*/
-
         for (auto&& fn : functions) {
             // Skip pure virtual functions.
             if (fn->is_a<VirtualFunction>() && fn->procedure().empty()) {
@@ -1265,10 +1243,6 @@ protected:
 
             fn->generate_source(os);
         }
-
-        /*if (owners.size() > 1) {
-            os << "}\n";
-        }*/
 
         if (!m_postamble.empty()) {
             std::istringstream sstream{m_postamble};
