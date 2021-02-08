@@ -846,7 +846,8 @@ protected:
                 os << ", ";
             }
 
-            os << "public " << parent->name();
+            os << "public ";
+            parent->generate_typename_for(os, this);
         }
     }
 

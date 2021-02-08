@@ -76,13 +76,13 @@ void usage(genny::Namespace* sdk) {
 }
 
 void multiple_inheritance(genny::Namespace* ns) {
-    auto foo = ns->class_("Foo");
+    auto foo = ns->namespace_("foo")->class_("Foo");
     foo->variable("a")->offset(8)->type("int");
 
-    auto bar = ns->class_("Bar");
+    auto bar = ns->namespace_("bar")->class_("Bar");
     bar->variable("b")->offset(16)->type("float");
 
-    auto baz = ns->class_("Baz")->parent(foo)->parent(bar);
+    auto baz = ns->namespace_("baz")->class_("Baz")->parent(foo)->parent(bar);
     auto c = baz->variable("c")->offset(foo->size() + bar->size() + 4)->type("long");
     baz->variable("a")->offset(c->end())->type("double");
 }
