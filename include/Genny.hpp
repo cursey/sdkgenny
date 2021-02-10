@@ -1,3 +1,6 @@
+// SdkGenny - Genny.hpp - A single file header framework for generating C++ compatible SDKs
+// https://github.com/cursey/sdkgenny
+
 #pragma once
 
 #include <algorithm>
