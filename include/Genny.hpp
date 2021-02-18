@@ -80,6 +80,20 @@ public:
 
     template <typename T> T* owner() { return (T*)((const Object*)this)->owner<T>(); }
 
+    template <typename T> const T* topmost_owner() const {
+        const T* topmost{};
+
+        for (auto owner = m_owner; owner != nullptr; owner = owner->m_owner) {
+            if (owner->is_a<T>()) {
+                topmost = (const T*)owner;
+            }
+        }
+
+        return topmost;
+    }
+
+    template <typename T> T* topmost_owner() { return (T*)((const Object*)this)->topmost_owner<T>(); }
+
     template <typename T> std::vector<T*> owners() const {
         std::vector<T*> owners{};
 
@@ -425,8 +439,8 @@ public:
 
                 if (offset - last_offset > 0) {
                     m_type->generate_typename_for(os, this);
-                    os << " " << name() << "_pad_" << std::hex << last_offset << " : " << std::dec << offset - last_offset
-                       << ";\n";
+                    os << " " << name() << "_pad_" << std::hex << last_offset << " : " << std::dec
+                       << offset - last_offset << ";\n";
                 }
 
                 field->generate(os);
@@ -440,7 +454,8 @@ public:
         // Fill out the remaining space.
         if (offset - last_offset > 0) {
             m_type->generate_typename_for(os, this);
-            os << " " << name() << "_pad_" << std::hex << last_offset << " : " << std::dec << offset - last_offset << ";\n";
+            os << " " << name() << "_pad_" << std::hex << last_offset << " : " << std::dec << offset - last_offset
+               << ";\n";
         }
     }
 };
@@ -514,9 +529,7 @@ public:
         os << ";\n";
     }
 
-    virtual void generate_source(std::ostream& os) const {
-        generate_procedure(os);
-    }
+    virtual void generate_source(std::ostream& os) const { generate_procedure(os); }
 
 protected:
     Type* m_return_value{};
@@ -1127,10 +1140,26 @@ protected:
             }
         }
 
-        for (auto&& type : types_to_include) {
-            if (!type->is_child_of(obj)) {
-                os << "#include \"" << include_path(obj, type).string() << "\"\n";
+        // Go through all the types to include and replace nested types with the types they're nested within.
+        for (auto it = types_to_include.begin(); it != types_to_include.end();) {
+            if (auto topmost = (*it)->topmost_owner<Struct>()) {
+                it = types_to_include.erase(it);
+
+                // Skip adding the topmost owner if it's the object we're generating a header for.
+                if (topmost == (Object*)obj) {
+                    continue;
+                }
+
+                if (auto&& [_, was_inserted] = types_to_include.emplace(topmost); was_inserted) {
+                    it = types_to_include.begin();
+                }
+            } else {
+                ++it;
             }
+        }
+
+        for (auto&& type : types_to_include) {
+            os << "#include \"" << include_path(obj, type).string() << "\"\n";
         }
 
         for (auto&& type : structs_to_forward_decl) {
@@ -1206,7 +1235,7 @@ protected:
         }
     }
 
-    template <typename T> void generate_source(const std::filesystem::path& sdk_path, T* obj) const { 
+    template <typename T> void generate_source(const std::filesystem::path& sdk_path, T* obj) const {
         // Skip generating a source file for an object with no functions.
         if (!obj->has_any<Function>()) {
             return;

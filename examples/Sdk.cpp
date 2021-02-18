@@ -87,6 +87,13 @@ void multiple_inheritance(genny::Namespace* ns) {
     baz->variable("a")->offset(c->end())->type("double");
 }
 
+void nested_type_inclusion(genny::Namespace* ns) {
+    auto foo = ns->class_("Foo");
+    auto foo_bar = foo->enum_("Bar");
+    auto baz = ns->class_("Baz");
+    baz->variable("bar")->type(foo_bar);
+}
+
 int main(int argc, char* argv[]) {
     genny::Sdk sdk{};
     auto g = sdk.global_ns();
@@ -118,6 +125,7 @@ int main(int argc, char* argv[]) {
     car(g->namespace_("car"));
     usage(g->namespace_("usage"));
     multiple_inheritance(g->namespace_("multi"));
+    nested_type_inclusion(g->namespace_("nested_type"));
 
     auto say_hi = CClass->static_function("say_hi");
     say_hi->returns(g->type("int"));
