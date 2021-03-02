@@ -68,5 +68,8 @@ public:
 }
 ```
 
+## Projects
+* [GlacierGenny](https://github.com/praydog/GlacierGenny) by [@praydog](https://github.com/praydog) - An SDK generator for HITMAN3
+
 ## License
 [MIT](https://choosealicense.com/licenses/mit/)
