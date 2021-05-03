@@ -70,6 +70,7 @@ public:
 
 ## Projects
 * [GlacierGenny](https://github.com/praydog/GlacierGenny) by [@praydog](https://github.com/praydog) - An SDK generator for HITMAN3
+* [RE2 Mod Framework](https://github.com/praydog/RE2-Mod-Framework) by [@praydog](https://github.com/praydog) - A mod framework for Resident-Evil 2 (re8 branch)
 
 ## License
 [MIT](https://choosealicense.com/licenses/mit/)
