@@ -22,3 +22,7 @@ add_executable(example_sdk "examples/Sdk.cpp")
 target_compile_features(example_sdk PRIVATE cxx_std_17)
 target_include_directories(example_sdk PRIVATE "include/")
 
+add_executable(example_dummydata "examples/DummyData.cpp")
+target_compile_features(example_dummydata PRIVATE cxx_std_17)
+target_include_directories(example_dummydata PRIVATE "include/")
+
