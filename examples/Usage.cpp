@@ -19,13 +19,13 @@ int main(int argc, char* argv[]) {
 
     // Add some members.
     foo->variable("a")->type("int")->offset(0);
-    foo->variable("b")->type("float")->offset(4);
+    foo->variable("b")->type("float")->append();
 
     // Make a subclass.
     auto bar = ns->class_("Bar")->parent(foo);
 
     // Add a member after 'b'.
-    bar->variable("c")->type("int")->offset(foo->variable("b")->end());
+    bar->variable("c")->type("int")->append();
 
     // Generate the SDK to the "usage_sdk" folder.
     sdk.generate(std::filesystem::current_path() / "usage_sdk");

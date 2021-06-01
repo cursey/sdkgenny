@@ -337,6 +337,10 @@ public:
         return this;
     }
 
+    // Sets the offset to be at the end of the owners current size. NOTE: This will increase the size of the owner by
+    // the size of this variable. If you are explicitly setting the size of your structs beforehand do not use this.
+    auto append() { return offset(owner<Type>()->size()); }
+
     virtual size_t size() const {
         if (m_type == nullptr) {
             return 0;

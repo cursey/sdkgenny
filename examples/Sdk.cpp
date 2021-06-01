@@ -66,13 +66,13 @@ void usage(genny::Namespace* sdk) {
 
     // Add some members.
     foo->variable("a")->type("int")->offset(0);
-    foo->variable("b")->type("float")->offset(4);
+    foo->variable("b")->type("float")->append();
 
     // Make a subclass.
     auto bar = ns->class_("Bar")->parent(foo);
 
     // Add a member after 'b'.
-    bar->variable("c")->type("int")->offset(foo->variable("b")->end());
+    bar->variable("c")->type("int")->append();
 }
 
 void multiple_inheritance(genny::Namespace* ns) {
