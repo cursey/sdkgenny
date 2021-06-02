@@ -19,8 +19,8 @@
 #include <vector>
 
 #ifdef GENNY_INCLUDE_PARSER
-#include <optional>
 #include <cstdlib>
+#include <optional>
 
 #include <tao/pegtl.hpp>
 #endif
@@ -487,12 +487,12 @@ public:
         return this;
     }
 
-    size_t size() const override { 
+    size_t size() const override {
         if (m_type == nullptr) {
             return 0;
         }
 
-        return m_type->size() * m_count; 
+        return m_type->size() * m_count;
     }
 
     void generate(std::ostream& os) const override {
@@ -1370,7 +1370,7 @@ struct Sep : sor<one<' ', '\t'>, Comment> {};
 struct Seps : star<Sep> {};
 
 struct HexNum : seq<one<'0'>, one<'x'>, plus<xdigit>> {};
-struct DecNum: plus<digit> {};
+struct DecNum : plus<digit> {};
 struct Num : sor<HexNum, DecNum> {};
 
 struct NsId : TAO_PEGTL_STRING("namespace") {};
@@ -1378,7 +1378,7 @@ struct NsName : identifier {};
 struct NsNameList : list<NsName, one<'.'>, Sep> {};
 struct NsDecl : seq<NsId, Seps, opt<NsNameList>> {};
 
-struct TypeId: TAO_PEGTL_STRING("type") {};
+struct TypeId : TAO_PEGTL_STRING("type") {};
 struct TypeName : identifier {};
 struct TypeSize : Num {};
 struct TypeDecl : seq<TypeId, Seps, TypeName, Seps, TypeSize> {};
@@ -1387,7 +1387,7 @@ struct StructId : TAO_PEGTL_STRING("struct") {};
 struct StructName : identifier {};
 struct StructParent : identifier {};
 struct StructParentList : list<StructParent, one<','>, Sep> {};
-struct StructParentListDecl : seq<one<':'>, Seps, StructParentList> {}; 
+struct StructParentListDecl : seq<one<':'>, Seps, StructParentList> {};
 struct StructDecl : seq<StructId, Seps, StructName, Seps, opt<StructParentListDecl>> {};
 
 struct VarTypeName : identifier {};
@@ -1395,7 +1395,7 @@ struct ArrayCount : Num {};
 struct ArrayType : seq<VarTypeName, one<'['>, ArrayCount, one<']'>> {};
 struct VarType : sor<ArrayType, VarTypeName> {};
 struct VarName : identifier {};
-struct VarOffset: Num {};
+struct VarOffset : Num {};
 struct VarOffsetDecl : seq<one<'@'>, Seps, VarOffset> {};
 struct VarDecl : seq<VarType, Seps, VarName, Seps, opt<VarOffsetDecl>> {};
 
@@ -1455,7 +1455,7 @@ template <> struct Action<TypeName> {
 };
 
 template <> struct Action<TypeDecl> {
-    template <typename ActionInput> static void apply(const ActionInput& in,State& s) {
+    template <typename ActionInput> static void apply(const ActionInput& in, State& s) {
         s.cur_ns->type(s.type_name)->size(s.type_size);
         s.type_name.clear();
         s.type_size = -1;
@@ -1487,40 +1487,40 @@ template <> struct Action<StructDecl> {
 
             s.cur_struct->parent(parent);
         }
-        
+
         s.struct_name.clear();
         s.struct_parents.clear();
     }
 };
 
 template <> struct Action<VarTypeName> {
-    template <typename ActionInput> static void apply(const ActionInput& in, State& s) { 
+    template <typename ActionInput> static void apply(const ActionInput& in, State& s) {
         s.var_type = in.string_view();
     }
 };
 
 template <> struct Action<ArrayCount> {
-    template <typename ActionInput> static void apply(const ActionInput& in, State& s) { 
+    template <typename ActionInput> static void apply(const ActionInput& in, State& s) {
         s.array_count = std::stoull(in.string_view().data(), nullptr, 0);
     }
 };
 
 template <> struct Action<VarName> {
-    template <typename ActionInput> static void apply(const ActionInput& in, State& s) { 
+    template <typename ActionInput> static void apply(const ActionInput& in, State& s) {
         s.var_name = in.string_view();
     }
 };
 
 template <> struct Action<VarOffset> {
-    template <typename ActionInput> static void apply(const ActionInput& in, State& s) { 
+    template <typename ActionInput> static void apply(const ActionInput& in, State& s) {
         s.var_offset = std::stoull(in.string_view().data(), nullptr, 0);
     }
 };
 
 template <> struct Action<VarDecl> {
-    template <typename ActionInput> static void apply(const ActionInput& in, State& s) { 
+    template <typename ActionInput> static void apply(const ActionInput& in, State& s) {
         Variable* var{};
-        
+
         if (s.array_count) {
             var = s.cur_struct->array_(s.var_name)->count(*s.array_count);
         } else {
@@ -1541,7 +1541,7 @@ template <> struct Action<VarDecl> {
         s.var_offset = std::nullopt;
     }
 };
-}
+} // namespace parser
 #endif
 
 } // namespace genny
