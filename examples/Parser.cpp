@@ -17,25 +17,33 @@ struct vec3
 )";
 
 constexpr auto g_usage_str = R"(
+# Add some basic types to the global namespace.
 type int 4
 type float 4
 
+# Make an actual namespace.
+namespace foobar
+
+# Make a class in the namespace.
 struct Foo
-    int a
+    # Add some members.
+    int a @ 0
     float b
 
-# Test inheritance
+# Make a subclass.
 struct Bar : Foo
-    int c @ 16
+    # Add a member after 'b'.
+    int c
 
-# Test multiple inheritance
-struct Baz : Foo, Bar
+# Make a subclass with multiple parents.
+struct Baz : Foo, Bar 
     float d
 )";
 
 namespace pegtl = tao::pegtl;
 
 struct State {
+    genny::Namespace* global_ns{};
     genny::Namespace* cur_ns{};
     genny::Struct* cur_struct{};
 
@@ -48,9 +56,32 @@ struct State {
     std::string var_type{};
     std::string var_name{};
     std::optional<uintptr_t> var_offset{};
+
+    std::vector<std::string> ns_pieces{};
 };
 
 template <typename Rule> struct Action : pegtl::nothing<Rule> {};
+
+template <> struct Action<genny::parser::NsName> {
+    template <typename ActionInput> static void apply(const ActionInput& in, State& s) {
+        s.ns_pieces.emplace_back(in.string_view());
+        std::cout << "Ns name: " << in.string_view() << std::endl;
+    }
+};
+
+template <> struct Action<genny::parser::NsDecl> {
+    template <typename ActionInput> static void apply(const ActionInput& in, State& s) {
+        auto cur_ns = s.global_ns;
+
+        for (auto&& ns : s.ns_pieces) {
+            cur_ns = cur_ns->namespace_(ns);
+        }
+
+        s.cur_ns = cur_ns;
+        s.ns_pieces.clear();
+        std::cout << "Ns decl: " << in.string_view() << std::endl;
+    }
+};
 
 template <> struct Action<genny::parser::TypeSize> {
     template <typename ActionInput> static void apply(const ActionInput& in, State& s) {
@@ -151,7 +182,7 @@ template <> struct Action<genny::parser::VarDecl> {
 int main(int argc, char* argv[]) {
     genny::Sdk sdk{};
     State s{};
-    s.cur_ns = sdk.global_ns();
+    s.global_ns = s.cur_ns = sdk.global_ns();
 
     //pegtl::string_input in{"float type 4", "example_string"};
     //pegtl::string_input in{g_example_str, "example_string"};
