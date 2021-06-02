@@ -344,8 +344,14 @@ public:
         return this;
     }
 
-    // Sets the offset to be at the end of the owners current size. NOTE: This will increase the size of the owner by
-    // the size of this variable. If you are explicitly setting the size of your structs beforehand do not use this.
+    // Sets the offset to be at the end of the owners current size.
+    //
+    // NOTE: This will increase the size of the owner by the size of this variable. If you are explicitly setting the
+    // size of your structs beforehand do not use this.
+    //
+    // NOTE: If you're using append for the very first variables added to a struct make sure you append before setting
+    // the type of the variable otherwise the variable's offset will be set after where you want it (due to itself
+    // already being considered part of the struct).
     auto append() { return offset(owner<Type>()->size()); }
 
     virtual size_t size() const {
