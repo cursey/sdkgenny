@@ -31,13 +31,20 @@ struct Foo
     float b
 
 # Make a subclass.
-struct Bar : Foo
+struct Bar : Foo 
     # Add a member after 'b'.
     int c
 
 # Make a subclass with multiple parents.
-struct Baz : Foo, Bar 
+struct Baz : Foo, Bar
     float d
+
+namespace
+
+struct Vec3
+    float x
+    float y
+    float z
 )";
 
 namespace pegtl = tao::pegtl;

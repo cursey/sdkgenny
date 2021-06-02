@@ -8,7 +8,7 @@ namespace genny::parser {
     using namespace tao::pegtl;
 
     struct Comment : disable<one<'#'>, until<eolf>> {};
-    struct Sep : sor<space, Comment> {};
+    struct Sep : sor<one<' ', '\t'>, Comment> {};
     struct Seps : star<Sep> {};
 
     struct HexNum : seq<one<'0'>, one<'x'>, plus<xdigit>> {};
@@ -18,7 +18,7 @@ namespace genny::parser {
     struct NsId : TAO_PEGTL_STRING("namespace") {};
     struct NsName : identifier {};
     struct NsNameList : list<NsName, one<'.'>, Sep> {};
-    struct NsDecl : seq<NsId, Seps, NsNameList> {};
+    struct NsDecl : seq<NsId, Seps, opt<NsNameList>> {};
 
     struct TypeId: TAO_PEGTL_STRING("type") {};
     struct TypeName : identifier {};
@@ -38,7 +38,6 @@ namespace genny::parser {
     struct VarOffsetDecl : seq<one<'@'>, Seps, VarOffset> {};
     struct VarDecl : seq<VarType, Seps, VarName, Seps, opt<VarOffsetDecl>> {};
 
-    struct Decl : seq<Seps, sor<NsDecl, TypeDecl, StructDecl, VarDecl>> {};
-
+    struct Decl : seq<Seps, sor<NsDecl, TypeDecl, StructDecl, VarDecl>, Seps> {};
     struct Grammar : until<eof, sor<eolf, Decl>> {};
 }
