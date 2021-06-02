@@ -1399,7 +1399,7 @@ struct VarOffset : Num {};
 struct VarOffsetDecl : seq<one<'@'>, Seps, VarOffset> {};
 struct VarDecl : seq<VarType, Seps, VarName, Seps, opt<VarOffsetDecl>> {};
 
-struct Decl : seq<Seps, sor<NsDecl, TypeDecl, StructDecl, VarDecl>, Seps> {};
+struct Decl : must<Seps, sor<NsDecl, TypeDecl, StructDecl, VarDecl>, Seps> {};
 struct Grammar : until<eof, sor<eolf, Decl>> {};
 
 struct State {
@@ -1519,6 +1519,10 @@ template <> struct Action<VarOffset> {
 
 template <> struct Action<VarDecl> {
     template <typename ActionInput> static void apply(const ActionInput& in, State& s) {
+        if (s.cur_struct == nullptr) {
+            throw parse_error{"Can't declare a variable outside of a struct!", in};
+        }
+
         Variable* var{};
 
         if (s.array_count) {
