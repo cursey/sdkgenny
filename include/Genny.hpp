@@ -481,7 +481,13 @@ public:
         return this;
     }
 
-    size_t size() const override { return m_type->size() * m_count; }
+    size_t size() const override { 
+        if (m_type == nullptr) {
+            return 0;
+        }
+
+        return m_type->size() * m_count; 
+    }
 
     void generate(std::ostream& os) const override {
         m_type->generate_typename_for(os, this);
@@ -1378,7 +1384,10 @@ struct StructParentList : list<StructParent, one<','>, Sep> {};
 struct StructParentListDecl : seq<one<':'>, Seps, StructParentList> {}; 
 struct StructDecl : seq<StructId, Seps, StructName, Seps, opt<StructParentListDecl>> {};
 
-struct VarType : identifier {};
+struct VarTypeName : identifier {};
+struct ArrayCount : Num {};
+struct ArrayType : seq<VarTypeName, one<'['>, ArrayCount, one<']'>> {};
+struct VarType : sor<ArrayType, VarTypeName> {};
 struct VarName : identifier {};
 struct VarOffset: Num {};
 struct VarOffsetDecl : seq<one<'@'>, Seps, VarOffset> {};
@@ -1399,6 +1408,7 @@ struct State {
     std::vector<std::string> struct_parents{};
 
     std::string var_type{};
+    std::optional<size_t> array_count{};
     std::string var_name{};
     std::optional<uintptr_t> var_offset{};
 
@@ -1477,9 +1487,15 @@ template <> struct Action<StructDecl> {
     }
 };
 
-template <> struct Action<VarType> {
+template <> struct Action<VarTypeName> {
     template <typename ActionInput> static void apply(const ActionInput& in, State& s) { 
         s.var_type = in.string_view();
+    }
+};
+
+template <> struct Action<ArrayCount> {
+    template <typename ActionInput> static void apply(const ActionInput& in, State& s) { 
+        s.array_count = std::stoull(in.string_view().data(), nullptr, 0);
     }
 };
 
@@ -1497,7 +1513,13 @@ template <> struct Action<VarOffset> {
 
 template <> struct Action<VarDecl> {
     template <typename ActionInput> static void apply(const ActionInput& in, State& s) { 
-        auto var = s.cur_struct->variable(s.var_name)->type(s.var_type);
+        Variable* var{};
+        
+        if (s.array_count) {
+            var = s.cur_struct->array_(s.var_name)->count(*s.array_count);
+        } else {
+            var = s.cur_struct->variable(s.var_name);
+        }
 
         if (s.var_offset) {
             var->offset(*s.var_offset);
@@ -1505,7 +1527,10 @@ template <> struct Action<VarDecl> {
             var->append();
         }
 
+        var->type(s.var_type);
+
         s.var_type.clear();
+        s.array_count = std::nullopt;
         s.var_name.clear();
         s.var_offset = std::nullopt;
     }

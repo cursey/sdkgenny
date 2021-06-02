@@ -45,6 +45,9 @@ struct Vec3
     float x
     float y
     float z
+
+struct OtherVec3
+    float[3] xyz
 )";
 
 namespace pegtl = tao::pegtl;
