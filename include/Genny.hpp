@@ -1391,9 +1391,11 @@ struct StructParentListDecl : seq<one<':'>, Seps, StructParentList> {};
 struct StructDecl : seq<StructId, Seps, StructName, Seps, opt<StructParentListDecl>> {};
 
 struct VarTypeName : identifier {};
+struct VarTypePtr : one<'*'> {};
 struct ArrayCount : Num {};
 struct ArrayType : seq<VarTypeName, one<'['>, ArrayCount, one<']'>> {};
-struct VarType : sor<ArrayType, VarTypeName> {};
+struct NormalVarType : seq<VarTypeName, star<VarTypePtr>> {};
+struct VarType : sor<ArrayType, NormalVarType> {};
 struct VarName : identifier {};
 struct VarOffset : Num {};
 struct VarOffsetDecl : seq<one<'@'>, Seps, VarOffset> {};
@@ -1414,6 +1416,7 @@ struct State {
     std::vector<std::string> struct_parents{};
 
     std::string var_type{};
+    int var_type_ptr{}; // The number of *'s basically.
     std::optional<size_t> array_count{};
     std::string var_name{};
     std::optional<uintptr_t> var_offset{};
@@ -1499,6 +1502,10 @@ template <> struct Action<VarTypeName> {
     }
 };
 
+template <> struct Action<VarTypePtr> {
+    template <typename ActionInput> static void apply(const ActionInput& in, State& s) { ++s.var_type_ptr; }
+};
+
 template <> struct Action<ArrayCount> {
     template <typename ActionInput> static void apply(const ActionInput& in, State& s) {
         s.array_count = std::stoull(in.string(), nullptr, 0);
@@ -1539,7 +1546,12 @@ template <> struct Action<VarDecl> {
 
         var->type(s.var_type);
 
+        for (auto i = 0; i < s.var_type_ptr; ++i) {
+            var->type(var->type()->ptr());
+        }
+
         s.var_type.clear();
+        s.var_type_ptr = 0;
         s.array_count = std::nullopt;
         s.var_name.clear();
         s.var_offset = std::nullopt;

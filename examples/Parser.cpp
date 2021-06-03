@@ -22,7 +22,7 @@ type int 4
 type float 4
 
 # Make an actual namespace.
-namespace foobar
+namespace foo.bar
 
 # Make a class in the namespace.
 struct Foo
@@ -48,6 +48,8 @@ struct Vec3
 
 struct OtherVec3
     float[3] xyz
+    float* xyz_ptr
+    int** xyz_ptr_ptr
 )";
 
 namespace pegtl = tao::pegtl;
