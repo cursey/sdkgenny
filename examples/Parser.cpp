@@ -18,6 +18,7 @@ struct vec3
 
 constexpr auto g_usage_str = R"(
 # Add some basic types to the global namespace.
+type char 1
 type int 4
 type float 4
 
@@ -55,6 +56,13 @@ enum Color
     RED = 1
     BLUE = 2
     GREEN = 0x3
+
+enum Size : char
+    SMALL = 0
+    MEDIUM = 1
+    LARGE = 2
+    XLARGE = 3
+    XXLARGE = 4
 )";
 
 namespace pegtl = tao::pegtl;

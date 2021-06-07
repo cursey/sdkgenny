@@ -1385,7 +1385,8 @@ struct TypeDecl : seq<TypeId, Seps, TypeName, Seps, TypeSize> {};
 
 struct EnumId : TAO_PEGTL_STRING("enum") {};
 struct EnumName : identifier {};
-struct EnumDecl : seq<EnumId, Seps, EnumName> {};
+struct EnumType : identifier {};
+struct EnumDecl : seq<EnumId, Seps, EnumName, Seps, opt<one<':'>, Seps, EnumType>> {};
 struct EnumVal : Num {};
 struct EnumValName : identifier {};
 struct EnumValDecl : seq<EnumValName, Seps, one<'='>, Seps, EnumVal> {};
@@ -1421,6 +1422,7 @@ struct State {
     size_t type_size{};
 
     std::string enum_name{};
+    std::string enum_type{};
     std::string enum_val_name{};
     uint32_t enum_val{};
 
@@ -1485,11 +1487,23 @@ template <> struct Action<EnumName> {
     }
 };
 
+template <> struct Action<EnumType> {
+    template <typename ActionInput> static void apply(const ActionInput& in, State& s) {
+        s.enum_type = in.string_view();
+    }
+};
+
 template <> struct Action<EnumDecl> {
     template <typename ActionInput> static void apply(const ActionInput& in, State& s) {
         s.cur_enum = s.cur_ns->enum_(s.enum_name);
+
+        if (!s.enum_type.empty()) {
+            s.cur_enum->type(s.cur_ns->type(s.enum_type));
+        }
+
         s.cur_struct = nullptr;
         s.enum_name.clear();
+        s.enum_type.clear();
     }
 };
 
