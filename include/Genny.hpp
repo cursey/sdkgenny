@@ -1383,6 +1383,13 @@ struct TypeName : identifier {};
 struct TypeSize : Num {};
 struct TypeDecl : seq<TypeId, Seps, TypeName, Seps, TypeSize> {};
 
+struct EnumId : TAO_PEGTL_STRING("enum") {};
+struct EnumName : identifier {};
+struct EnumDecl : seq<EnumId, Seps, EnumName> {};
+struct EnumVal : Num {};
+struct EnumValName : identifier {};
+struct EnumValDecl : seq<EnumValName, Seps, one<'='>, Seps, EnumVal> {};
+
 struct StructId : TAO_PEGTL_STRING("struct") {};
 struct StructName : identifier {};
 struct StructParent : identifier {};
@@ -1401,16 +1408,21 @@ struct VarOffset : Num {};
 struct VarOffsetDecl : seq<one<'@'>, Seps, VarOffset> {};
 struct VarDecl : seq<VarType, Seps, VarName, Seps, opt<VarOffsetDecl>> {};
 
-struct Decl : must<Seps, sor<NsDecl, TypeDecl, StructDecl, VarDecl>, Seps> {};
+struct Decl : must<Seps, sor<NsDecl, TypeDecl, EnumDecl, EnumValDecl, StructDecl, VarDecl>, Seps> {};
 struct Grammar : until<eof, sor<eolf, Decl>> {};
 
 struct State {
     genny::Namespace* global_ns{};
     genny::Namespace* cur_ns{};
+    genny::Enum* cur_enum{};
     genny::Struct* cur_struct{};
 
     std::string type_name{};
     size_t type_size{};
+
+    std::string enum_name{};
+    std::string enum_val_name{};
+    uint32_t enum_val{};
 
     std::string struct_name{};
     std::vector<std::string> struct_parents{};
@@ -1441,6 +1453,8 @@ template <> struct Action<NsDecl> {
         }
 
         s.cur_ns = cur_ns;
+        s.cur_enum = nullptr;
+        s.cur_struct = nullptr;
         s.ns_pieces.clear();
     }
 };
@@ -1465,6 +1479,44 @@ template <> struct Action<TypeDecl> {
     }
 };
 
+template <> struct Action<EnumName> {
+    template <typename ActionInput> static void apply(const ActionInput& in, State& s) {
+        s.enum_name = in.string_view();
+    }
+};
+
+template <> struct Action<EnumDecl> {
+    template <typename ActionInput> static void apply(const ActionInput& in, State& s) {
+        s.cur_enum = s.cur_ns->enum_(s.enum_name);
+        s.cur_struct = nullptr;
+        s.enum_name.clear();
+    }
+};
+
+template <> struct Action<EnumVal> {
+    template <typename ActionInput> static void apply(const ActionInput& in, State& s) {
+        s.enum_val = std::stoull(in.string(), nullptr, 0);
+    }
+};
+
+template <> struct Action<EnumValName> {
+    template <typename ActionInput> static void apply(const ActionInput& in, State& s) {
+        s.enum_val_name = in.string_view();
+    }
+};
+
+template <> struct Action<EnumValDecl> {
+    template <typename ActionInput> static void apply(const ActionInput& in, State& s) {
+        if (s.cur_enum == nullptr) {
+            throw parse_error{"Cannot declare an enum value outside of an enum", in};
+        }
+
+        s.cur_enum->value(s.enum_val_name, s.enum_val);
+        s.enum_val_name.clear();
+        s.enum_val = 0;
+    }
+};
+
 template <> struct Action<StructName> {
     template <typename ActionInput> static void apply(const ActionInput& in, State& s) {
         s.struct_name = in.string_view();
@@ -1485,7 +1537,7 @@ template <> struct Action<StructDecl> {
             auto parent = s.cur_ns->find<genny::Struct>(parent_name);
 
             if (parent == nullptr) {
-                throw tao::pegtl::parse_error{"Parent '" + parent_name + "' does not exist", in};
+                throw parse_error{"Parent '" + parent_name + "' does not exist", in};
             }
 
             s.cur_struct->parent(parent);
@@ -1493,6 +1545,7 @@ template <> struct Action<StructDecl> {
 
         s.struct_name.clear();
         s.struct_parents.clear();
+        s.cur_enum = nullptr;
     }
 };
 
@@ -1527,7 +1580,7 @@ template <> struct Action<VarOffset> {
 template <> struct Action<VarDecl> {
     template <typename ActionInput> static void apply(const ActionInput& in, State& s) {
         if (s.cur_struct == nullptr) {
-            throw parse_error{"Can't declare a variable outside of a struct!", in};
+            throw parse_error{"Can't declare a variable outside of a struct", in};
         }
 
         Variable* var{};

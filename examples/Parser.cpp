@@ -50,6 +50,11 @@ struct OtherVec3
     float[3] xyz
     float* xyz_ptr
     int** xyz_ptr_ptr
+
+enum Color
+    RED = 1
+    BLUE = 2
+    GREEN = 0x3
 )";
 
 namespace pegtl = tao::pegtl;
