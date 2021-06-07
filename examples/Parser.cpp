@@ -63,6 +63,11 @@ enum Size : char
     LARGE = 2
     XLARGE = 3
     XXLARGE = 4
+
+enum class Speed : int 
+    SLOW = 25 
+    MEDIUM = 40
+    FAST = 65
 )";
 
 namespace pegtl = tao::pegtl;

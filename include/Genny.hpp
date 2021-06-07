@@ -1384,9 +1384,10 @@ struct TypeSize : Num {};
 struct TypeDecl : seq<TypeId, Seps, TypeName, Seps, TypeSize> {};
 
 struct EnumId : TAO_PEGTL_STRING("enum") {};
+struct EnumClassId : TAO_PEGTL_STRING("class") {};
 struct EnumName : identifier {};
 struct EnumType : identifier {};
-struct EnumDecl : seq<EnumId, Seps, EnumName, Seps, opt<one<':'>, Seps, EnumType>> {};
+struct EnumDecl : seq<EnumId, Seps, opt<EnumClassId>, Seps, EnumName, Seps, opt<one<':'>, Seps, EnumType>> {};
 struct EnumVal : Num {};
 struct EnumValName : identifier {};
 struct EnumValDecl : seq<EnumValName, Seps, one<'='>, Seps, EnumVal> {};
@@ -1423,6 +1424,7 @@ struct State {
 
     std::string enum_name{};
     std::string enum_type{};
+    bool enum_class{};
     std::string enum_val_name{};
     uint32_t enum_val{};
 
@@ -1493,9 +1495,17 @@ template <> struct Action<EnumType> {
     }
 };
 
+template <> struct Action<EnumClassId> {
+    template <typename ActionInput> static void apply(const ActionInput& in, State& s) { s.enum_class = true; }
+};
+
 template <> struct Action<EnumDecl> {
     template <typename ActionInput> static void apply(const ActionInput& in, State& s) {
-        s.cur_enum = s.cur_ns->enum_(s.enum_name);
+        if (s.enum_class) {
+            s.cur_enum = s.cur_ns->enum_class(s.enum_name);
+        } else {
+            s.cur_enum = s.cur_ns->enum_(s.enum_name);
+        }
 
         if (!s.enum_type.empty()) {
             s.cur_enum->type(s.cur_ns->type(s.enum_type));
@@ -1504,6 +1514,7 @@ template <> struct Action<EnumDecl> {
         s.cur_struct = nullptr;
         s.enum_name.clear();
         s.enum_type.clear();
+        s.enum_class = false;
     }
 };
 
