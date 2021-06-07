@@ -40,6 +40,11 @@ struct Bar : Foo
 struct Baz : Foo, Bar
     float d
 
+namespace baz
+
+struct Qux
+    foo.bar.Baz baz
+
 namespace
 
 struct Vec3
@@ -71,7 +76,6 @@ enum class Speed : int
 )";
 
 namespace pegtl = tao::pegtl;
-
 
 int main(int argc, char* argv[]) {
     genny::Sdk sdk{};

@@ -1399,7 +1399,8 @@ struct StructParentList : list<StructParent, one<','>, Sep> {};
 struct StructParentListDecl : seq<one<':'>, Seps, StructParentList> {};
 struct StructDecl : seq<StructId, Seps, StructName, Seps, opt<StructParentListDecl>> {};
 
-struct VarTypeName : identifier {};
+struct VarTypeNamePart : identifier {};
+struct VarTypeName : list<VarTypeNamePart, one<'.'>> {};
 struct VarTypePtr : one<'*'> {};
 struct ArrayCount : Num {};
 struct ArrayType : seq<VarTypeName, one<'['>, ArrayCount, one<']'>> {};
@@ -1431,7 +1432,8 @@ struct State {
     std::string struct_name{};
     std::vector<std::string> struct_parents{};
 
-    std::string var_type{};
+    std::vector<std::string> var_type_parts{};
+    std::vector<std::string> var_type{};
     int var_type_ptr{}; // The number of *'s basically.
     std::optional<size_t> array_count{};
     std::string var_name{};
@@ -1439,6 +1441,43 @@ struct State {
 
     std::vector<std::string> ns_pieces{};
 };
+
+// Searches for the type identified by a vector of names. 
+template <typename T>
+T* lookup(Namespace* g, Namespace* l, const std::vector<std::string>& names) {
+    std::function<T*(Object*, int)> search = [&](Object* parent, int i) -> T* {
+        if (names.empty() || i >= names.size()) {
+            return nullptr;
+        }
+
+        const auto& name = names[i];
+
+        // Search for the name.
+        auto child = parent->find<Object>(name);
+        
+        if (child == nullptr) {
+            return nullptr;
+        }
+
+        // We found the name. Is this the type we were looking for?
+        if (i == names.size() - 1) {
+            return dynamic_cast<T*>(child);
+        }
+
+        return search(child, ++i);
+    };
+
+    // First search the local namespace.
+    auto type = search(l, 0);
+
+    if (type) {
+        return type;
+    }
+
+    // Otherwise search the global.
+    return search(g, 0);
+}
+
 
 template <typename Rule> struct Action : nothing<Rule> {};
 
@@ -1574,9 +1613,15 @@ template <> struct Action<StructDecl> {
     }
 };
 
+template <> struct Action<VarTypeNamePart> {
+    template <typename ActionInput> static void apply(const ActionInput& in, State& s) {
+        s.var_type_parts.emplace_back(in.string_view());
+    }
+};
+
 template <> struct Action<VarTypeName> {
     template <typename ActionInput> static void apply(const ActionInput& in, State& s) {
-        s.var_type = in.string_view();
+        s.var_type = std::move(s.var_type_parts);
     }
 };
 
@@ -1622,7 +1667,13 @@ template <> struct Action<VarDecl> {
             var->append();
         }
 
-        var->type(s.var_type);
+        auto var_type = lookup<Type>(s.global_ns, s.cur_ns, s.var_type);
+
+        if (var_type == nullptr) {
+            throw parse_error{"Can't find type with name '" + s.var_type.back() + "'", in};
+        }
+
+        var->type(var_type);
 
         for (auto i = 0; i < s.var_type_ptr; ++i) {
             var->type(var->type()->ptr());
