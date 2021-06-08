@@ -1440,43 +1440,49 @@ struct State {
     std::optional<uintptr_t> var_offset{};
 
     std::vector<std::string> ns_pieces{};
+
+    // Searches for the type identified by a vector of names. 
+    template <typename T>
+    T* lookup(const std::vector<std::string>& names) {
+        std::function<T*(Object*, int)> search = [&](Object* parent, int i) -> T* {
+            if (names.empty() || i >= names.size()) {
+                return nullptr;
+            }
+
+            const auto& name = names[i];
+
+            // Search for the name.
+            auto child = parent->find<Object>(name);
+            
+            if (child == nullptr) {
+                return nullptr;
+            }
+
+            // We found the name. Is this the type we were looking for?
+            if (i == names.size() - 1) {
+                return dynamic_cast<T*>(child);
+            }
+
+            return search(child, ++i);
+        };
+
+        // First search the current struct.
+        if (cur_struct != nullptr) {
+            if (auto type = search(cur_struct, 0)) {
+                return type;
+            }
+        }
+
+        // Then search the local namespace.
+        if (auto type = search(cur_ns, 0)) {
+            return type;
+        }
+
+        // Otherwise search the global namespace.
+        return search(global_ns, 0);
+    }
 };
 
-// Searches for the type identified by a vector of names. 
-template <typename T>
-T* lookup(Namespace* g, Namespace* l, const std::vector<std::string>& names) {
-    std::function<T*(Object*, int)> search = [&](Object* parent, int i) -> T* {
-        if (names.empty() || i >= names.size()) {
-            return nullptr;
-        }
-
-        const auto& name = names[i];
-
-        // Search for the name.
-        auto child = parent->find<Object>(name);
-        
-        if (child == nullptr) {
-            return nullptr;
-        }
-
-        // We found the name. Is this the type we were looking for?
-        if (i == names.size() - 1) {
-            return dynamic_cast<T*>(child);
-        }
-
-        return search(child, ++i);
-    };
-
-    // First search the local namespace.
-    auto type = search(l, 0);
-
-    if (type) {
-        return type;
-    }
-
-    // Otherwise search the global.
-    return search(g, 0);
-}
 
 
 template <typename Rule> struct Action : nothing<Rule> {};
@@ -1667,7 +1673,7 @@ template <> struct Action<VarDecl> {
             var->append();
         }
 
-        auto var_type = lookup<Type>(s.global_ns, s.cur_ns, s.var_type);
+        auto var_type = s.lookup<Type>(s.var_type);
 
         if (var_type == nullptr) {
             throw parse_error{"Can't find type with name '" + s.var_type.back() + "'", in};
