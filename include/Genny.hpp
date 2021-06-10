@@ -238,7 +238,7 @@ protected:
 
     std::string m_name{};
     std::vector<std::unique_ptr<Object>> m_children{};
-    std::set<std::string> m_metadata{};
+    std::vector<std::string> m_metadata{};
 };
 
 template <typename T> T* cast(const Object* object) {
@@ -1450,8 +1450,8 @@ struct State {
     genny::Enum* cur_enum{};
     genny::Struct* cur_struct{};
 
-    std::set<std::string> metadata_parts{};
-    std::set<std::string> metadata{};
+    std::vector<std::string> metadata_parts{};
+    std::vector<std::string> metadata{};
 
     std::vector<std::string> ns_parts{};
     std::vector<std::string> ns{};
@@ -1521,7 +1521,7 @@ template <typename Rule> struct Action : nothing<Rule> {};
 
 template <> struct Action<Metadata> {
     template <typename ActionInput> static void apply(const ActionInput& in, State& s) {
-        s.metadata_parts.emplace(in.string_view());
+        s.metadata_parts.emplace_back(in.string_view());
     }
 };
 
