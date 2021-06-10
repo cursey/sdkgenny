@@ -75,6 +75,23 @@ public:
     const auto& metadata() const { return m_metadata; }
     auto& metadata() { return m_metadata; }
 
+    virtual void generate_metadata(std::ostream& os) const { 
+        if (m_metadata.empty()) {
+            return;
+        }
+
+        os << "// Metadata: ";
+
+        for (auto&& md : m_metadata) {
+            os << md;
+            if (&md != &*m_metadata.rbegin()) {
+                os << md << ", ";
+            }
+        }
+
+        os << "\n";
+    }
+
     template <typename T> bool is_a() const { return dynamic_cast<const T*>(this) != nullptr; }
 
     // Searches for an owner of the correct type.
@@ -221,7 +238,7 @@ protected:
 
     std::string m_name{};
     std::vector<std::unique_ptr<Object>> m_children{};
-    std::vector<std::string> m_metadata{};
+    std::set<std::string> m_metadata{};
 };
 
 template <typename T> T* cast(const Object* object) {
@@ -369,6 +386,7 @@ public:
     auto end() const { return offset() + size(); }
 
     virtual void generate(std::ostream& os) const {
+        generate_metadata(os);
         m_type->generate_typename_for(os, this);
         os << " " << m_name << "; // 0x" << std::hex << m_offset << "\n";
     }
@@ -399,6 +417,7 @@ public:
         auto end() const { return offset() + size(); }
 
         void generate(std::ostream& os) const {
+            generate_metadata(os);
             owner<Variable>()->type()->generate_typename_for(os, this);
             os << " " << m_name << " : " << m_size << ";\n";
         }
@@ -500,6 +519,7 @@ public:
     }
 
     void generate(std::ostream& os) const override {
+        generate_metadata(os);
         m_type->generate_typename_for(os, this);
         os << " " << m_name << "[" << std::dec << m_count << "]; // 0x" << std::hex << m_offset << "\n";
     }
@@ -802,6 +822,7 @@ public:
     virtual void generate_forward_decl(std::ostream& os) const { os << "struct " << m_name << ";\n"; }
 
     virtual void generate(std::ostream& os) const {
+        generate_metadata(os);
         os << "struct " << m_name;
         generate_inheritance(os);
         os << " {\n";
@@ -1377,7 +1398,9 @@ struct HexNum : seq<one<'0'>, one<'x'>, plus<xdigit>> {};
 struct DecNum : plus<digit> {};
 struct Num : sor<HexNum, DecNum> {};
 
-struct Metadata : identifier {};
+// plus<printable characters not-including comma or closing square bracket>
+struct Metadata : plus<sor<range<32, 43>, range<45, 92>, range<94, 126>>> {};
+//struct Metadata : identifier {};
 struct MetadataDecl : seq<two<'['>, list<Metadata, one<','>, Sep>, two<']'>> {};
 
 struct NsId : TAO_PEGTL_STRING("namespace") {};
@@ -1416,7 +1439,7 @@ struct VarType : sor<ArrayType, NormalVarType> {};
 struct VarName : identifier {};
 struct VarOffset : Num {};
 struct VarOffsetDecl : seq<one<'@'>, Seps, VarOffset> {};
-struct VarDecl : seq<VarType, Seps, VarName, Seps, opt<VarOffsetDecl>> {};
+struct VarDecl : seq<VarType, Seps, VarName, Seps, opt<VarOffsetDecl>, Seps, opt<MetadataDecl>> {};
 
 struct Decl : must<Seps, sor<NsDecl, TypeDecl, EnumDecl, EnumValDecl, StructDecl, VarDecl>, Seps> {};
 struct Grammar : until<eof, sor<eolf, Decl>> {};
@@ -1427,8 +1450,8 @@ struct State {
     genny::Enum* cur_enum{};
     genny::Struct* cur_struct{};
 
-    std::vector<std::string> metadata_parts{};
-    std::vector<std::string> metadata{};
+    std::set<std::string> metadata_parts{};
+    std::set<std::string> metadata{};
 
     std::vector<std::string> ns_parts{};
     std::vector<std::string> ns{};
@@ -1494,13 +1517,11 @@ struct State {
     }
 };
 
-
-
 template <typename Rule> struct Action : nothing<Rule> {};
 
 template <> struct Action<Metadata> {
     template <typename ActionInput> static void apply(const ActionInput& in, State& s) {
-        s.metadata_parts.emplace_back(in.string_view());
+        s.metadata_parts.emplace(in.string_view());
     }
 };
 
@@ -1716,6 +1737,10 @@ template <> struct Action<VarDecl> {
 
         for (auto i = 0; i < s.var_type_ptr; ++i) {
             var->type(var->type()->ptr());
+        }
+
+        if (!s.metadata.empty()) {
+            var->metadata() = std::move(s.metadata);
         }
 
         s.var_type.clear();

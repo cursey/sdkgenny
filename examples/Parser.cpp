@@ -28,7 +28,7 @@ namespace foo.bar
 # Make a class in the namespace.
 struct Foo
     # Add some members.
-    int a @ 0
+    int a @ 0 [[u32]]
     float b
 
 # Make a subclass.
