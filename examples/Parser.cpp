@@ -18,9 +18,9 @@ struct vec3
 
 constexpr auto g_usage_str = R"(
 # Add some basic types to the global namespace.
-type char 1
-type int 4
-type float 4
+type char 1 [[u8]]
+type int 4 [[s32]]
+type float 4 [[f32]]
 
 # Make an actual namespace.
 namespace foo.bar

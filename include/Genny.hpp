@@ -72,6 +72,9 @@ public:
 
     const auto& name() const { return m_name; }
 
+    const auto& metadata() const { return m_metadata; }
+    auto& metadata() { return m_metadata; }
+
     template <typename T> bool is_a() const { return dynamic_cast<const T*>(this) != nullptr; }
 
     // Searches for an owner of the correct type.
@@ -218,6 +221,7 @@ protected:
 
     std::string m_name{};
     std::vector<std::unique_ptr<Object>> m_children{};
+    std::vector<std::string> m_metadata{};
 };
 
 template <typename T> T* cast(const Object* object) {
@@ -1373,6 +1377,9 @@ struct HexNum : seq<one<'0'>, one<'x'>, plus<xdigit>> {};
 struct DecNum : plus<digit> {};
 struct Num : sor<HexNum, DecNum> {};
 
+struct Metadata : identifier {};
+struct MetadataDecl : seq<two<'['>, list<Metadata, one<','>, Sep>, two<']'>> {};
+
 struct NsId : TAO_PEGTL_STRING("namespace") {};
 struct NsName : identifier {};
 struct NsNameList : list<NsName, one<'.'>, Sep> {};
@@ -1381,7 +1388,7 @@ struct NsDecl : seq<NsId, Seps, opt<NsNameList>> {};
 struct TypeId : TAO_PEGTL_STRING("type") {};
 struct TypeName : identifier {};
 struct TypeSize : Num {};
-struct TypeDecl : seq<TypeId, Seps, TypeName, Seps, TypeSize> {};
+struct TypeDecl : seq<TypeId, Seps, TypeName, Seps, TypeSize, Seps, opt<MetadataDecl>> {};
 
 struct EnumId : TAO_PEGTL_STRING("enum") {};
 struct EnumClassId : TAO_PEGTL_STRING("class") {};
@@ -1420,6 +1427,12 @@ struct State {
     genny::Enum* cur_enum{};
     genny::Struct* cur_struct{};
 
+    std::vector<std::string> metadata_parts{};
+    std::vector<std::string> metadata{};
+
+    std::vector<std::string> ns_parts{};
+    std::vector<std::string> ns{};
+
     std::string type_name{};
     size_t type_size{};
 
@@ -1438,8 +1451,6 @@ struct State {
     std::optional<size_t> array_count{};
     std::string var_name{};
     std::optional<uintptr_t> var_offset{};
-
-    std::vector<std::string> ns_pieces{};
 
     // Searches for the type identified by a vector of names. 
     template <typename T>
@@ -1487,24 +1498,40 @@ struct State {
 
 template <typename Rule> struct Action : nothing<Rule> {};
 
+template <> struct Action<Metadata> {
+    template <typename ActionInput> static void apply(const ActionInput& in, State& s) {
+        s.metadata_parts.emplace_back(in.string_view());
+    }
+};
+
+template <> struct Action<MetadataDecl> {
+    template <typename ActionInput> static void apply(const ActionInput& in, State& s) {
+        s.metadata = std::move(s.metadata_parts);
+    }
+};
+
 template <> struct Action<NsName> {
     template <typename ActionInput> static void apply(const ActionInput& in, State& s) {
-        s.ns_pieces.emplace_back(in.string_view());
+        s.ns_parts.emplace_back(in.string_view());
     }
+};
+
+template <> struct Action<NsNameList> {
+    template <typename ActionInput> static void apply(const ActionInput& in, State& s) { s.ns = std::move(s.ns_parts); }
 };
 
 template <> struct Action<NsDecl> {
     template <typename ActionInput> static void apply(const ActionInput& in, State& s) {
         auto cur_ns = s.global_ns;
 
-        for (auto&& ns : s.ns_pieces) {
+        for (auto&& ns : s.ns) {
             cur_ns = cur_ns->namespace_(ns);
         }
 
         s.cur_ns = cur_ns;
         s.cur_enum = nullptr;
         s.cur_struct = nullptr;
-        s.ns_pieces.clear();
+        s.ns.clear();
     }
 };
 
@@ -1522,7 +1549,13 @@ template <> struct Action<TypeName> {
 
 template <> struct Action<TypeDecl> {
     template <typename ActionInput> static void apply(const ActionInput& in, State& s) {
-        s.cur_ns->type(s.type_name)->size(s.type_size);
+        auto type = s.cur_ns->type(s.type_name);
+        type->size(s.type_size);
+
+        if (!s.metadata.empty()) {
+            type->metadata() = std::move(s.metadata);
+        }
+
         s.type_name.clear();
         s.type_size = -1;
     }
