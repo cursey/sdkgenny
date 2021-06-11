@@ -30,6 +30,7 @@ namespace genny {
 class Type;
 class Reference;
 class Pointer;
+class Array;
 class Struct;
 class Class;
 class Enum;
@@ -269,11 +270,14 @@ public:
 
         os << get_typename();
     }
+
 };
 
 class Type : public Typename {
 public:
     Type(std::string_view name) : Typename{name} {}
+
+    virtual void generate_variable_postamble(std::ostream& os) const {}
 
     virtual size_t size() const { return m_size; }
     auto size(int size) {
@@ -283,6 +287,7 @@ public:
 
     Reference* ref();
     Pointer* ptr();
+    Array* array_(size_t count = 0);
 
 protected:
     size_t m_size{};
@@ -327,6 +332,48 @@ public:
 
 inline Pointer* Type::ptr() {
     return (Pointer*)m_owner->find_or_add<Pointer>(name() + '*')->to(this);
+}
+
+class Array : public Type {
+public:
+    Array(std::string_view name) : Type{name} {}
+
+    auto of() const { return m_of; }
+    auto of(Type* of) {
+        m_of = of;
+        return this;
+    }
+
+    auto count() const { return m_count; }
+    auto count(size_t count) {
+        m_count = count;
+        return this;
+    }
+
+    size_t size() const override {
+        if (m_of == nullptr) {
+            return 0;
+        }
+
+        return m_of->size() * m_count;
+    }
+
+    void generate_typename_for(std::ostream& os, const Object* obj) const override {
+        m_of->generate_typename_for(os, obj);
+    }
+
+    void generate_variable_postamble(std::ostream& os) const override { 
+        m_of->generate_variable_postamble(os);
+        os << "[" << std::dec << m_count << "]";
+    }
+
+protected:
+    Type* m_of{};
+    size_t m_count{};
+};
+
+inline Array* Type::array_(size_t count) {
+    return (Array*)m_owner->find_or_add<Array>(name() + "[" + std::to_string(count) + "]")->of(this)->count(count);
 }
 
 class GenericType : public Type {
@@ -388,7 +435,9 @@ public:
     virtual void generate(std::ostream& os) const {
         generate_metadata(os);
         m_type->generate_typename_for(os, this);
-        os << " " << m_name << "; // 0x" << std::hex << m_offset << "\n";
+        os << " " << m_name;
+        m_type->generate_variable_postamble(os);
+        os << "; // 0x" << std::hex << m_offset << "\n";
     }
 
 protected:
@@ -498,34 +547,6 @@ public:
                << ";\n";
         }
     }
-};
-
-class Array : public Variable {
-public:
-    Array(std::string_view name) : Variable{name} {}
-
-    auto count() const { return m_count; }
-    auto count(size_t size) {
-        m_count = size;
-        return this;
-    }
-
-    size_t size() const override {
-        if (m_type == nullptr) {
-            return 0;
-        }
-
-        return m_type->size() * m_count;
-    }
-
-    void generate(std::ostream& os) const override {
-        generate_metadata(os);
-        m_type->generate_typename_for(os, this);
-        os << " " << m_name << "[" << std::dec << m_count << "]; // 0x" << std::hex << m_offset << "\n";
-    }
-
-protected:
-    size_t m_count{};
 };
 
 class Parameter : public Object {
@@ -775,7 +796,6 @@ public:
         return add(std::make_unique<Bitfield>(offset));
     }
 
-    auto array_(std::string_view name) { return find_or_add_unique<Array>(name); }
     auto struct_(std::string_view name) { return find_or_add_unique<Struct>(name); }
     auto class_(std::string_view name) { return find_or_add_unique<Class>(name); }
     auto enum_(std::string_view name) { return find_or_add_unique<Enum>(name); }
@@ -1713,13 +1733,14 @@ template <> struct Action<VarDecl> {
             throw parse_error{"Can't declare a variable outside of a struct", in};
         }
 
-        Variable* var{};
+        /*Variable* var{};
 
         if (s.array_count) {
             var = s.cur_struct->array_(s.var_name)->count(*s.array_count);
         } else {
             var = s.cur_struct->variable(s.var_name);
-        }
+        }*/
+        auto var = s.cur_struct->variable(s.var_name);
 
         if (s.var_offset) {
             var->offset(*s.var_offset);
@@ -1733,6 +1754,10 @@ template <> struct Action<VarDecl> {
             throw parse_error{"Can't find type with name '" + s.var_type.back() + "'", in};
         }
 
+        if (s.array_count) {
+            var_type = var_type->array_(*s.array_count);
+        }
+        
         var->type(var_type);
 
         for (auto i = 0; i < s.var_type_ptr; ++i) {

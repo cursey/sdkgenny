@@ -60,9 +60,9 @@ int main(int argc, char* argv[]) {
 
     wheel->variable("size")->type(g->type("int"))->offset(0);
     door->variable("color")->type(color)->offset(0);
-    car->array_("wheels")->count(4)->type(wheel)->offset(16);
-    car->array_("doors")->count(4)->type(door)->offset(16 + 4 * 4);
-    car->variable("pos")->type(g->type("Vec3"))->offset(car->array_("doors")->end());
+    car->variable("wheels")->type(wheel->array_(4))->offset(16);
+    car->variable("doors")->type(door->array_(4))->offset(16 + 4 * 4);
+    car->variable("pos")->type(g->type("Vec3"))->offset(car->variable("doors")->end());
     car->variable("pos_history")->type(g->type("Vec3")->ptr())->offset(car->variable("pos")->end());
 
     auto drive = car->function("drive");
