@@ -76,7 +76,7 @@ public:
     const auto& metadata() const { return m_metadata; }
     auto& metadata() { return m_metadata; }
 
-    virtual void generate_metadata(std::ostream& os) const { 
+    virtual void generate_metadata(std::ostream& os) const {
         if (m_metadata.empty()) {
             return;
         }
@@ -270,7 +270,6 @@ public:
 
         os << get_typename();
     }
-
 };
 
 class Type : public Typename {
@@ -368,7 +367,7 @@ public:
         m_of->generate_typename_for(os, obj);
     }
 
-    void generate_variable_postamble(std::ostream& os) const override { 
+    void generate_variable_postamble(std::ostream& os) const override {
         m_of->generate_variable_postamble(os);
         os << "[" << std::dec << m_count << "]";
     }
@@ -1426,7 +1425,7 @@ struct Num : sor<HexNum, DecNum> {};
 
 // plus<printable characters not-including comma or closing square bracket>
 struct Metadata : plus<sor<range<32, 43>, range<45, 92>, range<94, 126>>> {};
-//struct Metadata : identifier {};
+// struct Metadata : identifier {};
 struct MetadataDecl : seq<two<'['>, list<Metadata, one<','>, Sep>, two<']'>> {};
 
 struct NsId : TAO_PEGTL_STRING("namespace") {};
@@ -1458,10 +1457,11 @@ struct StructDecl : seq<StructId, Seps, StructName, Seps, opt<StructParentListDe
 struct VarTypeNamePart : identifier {};
 struct VarTypeName : list<VarTypeNamePart, one<'.'>> {};
 struct VarTypePtr : one<'*'> {};
-struct ArrayCount : Num {};
-struct ArrayType : seq<VarTypeName, one<'['>, ArrayCount, one<']'>> {};
-struct NormalVarType : seq<VarTypeName, star<VarTypePtr>> {};
-struct VarType : sor<ArrayType, NormalVarType> {};
+struct VarTypeArrayCount : Num {};
+struct VarTypeArray : seq<one<'['>, VarTypeArrayCount, one<']'>> {};
+
+struct VarType : seq<VarTypeName, star<sor<VarTypeArray, VarTypePtr>>> {};
+
 struct VarName : identifier {};
 struct VarOffset : Num {};
 struct VarOffsetDecl : seq<one<'@'>, Seps, VarOffset> {};
@@ -1475,6 +1475,7 @@ struct State {
     genny::Namespace* cur_ns{};
     genny::Enum* cur_enum{};
     genny::Struct* cur_struct{};
+    genny::Type* cur_type{};
 
     std::vector<std::string> metadata_parts{};
     std::vector<std::string> metadata{};
@@ -1494,16 +1495,13 @@ struct State {
     std::string struct_name{};
     std::vector<std::string> struct_parents{};
 
-    std::vector<std::string> var_type_parts{};
     std::vector<std::string> var_type{};
-    int var_type_ptr{}; // The number of *'s basically.
-    std::optional<size_t> array_count{};
+    std::optional<size_t> var_type_array_count{};
     std::string var_name{};
     std::optional<uintptr_t> var_offset{};
 
-    // Searches for the type identified by a vector of names. 
-    template <typename T>
-    T* lookup(const std::vector<std::string>& names) {
+    // Searches for the type identified by a vector of names.
+    template <typename T> T* lookup(const std::vector<std::string>& names) {
         std::function<T*(Object*, int)> search = [&](Object* parent, int i) -> T* {
             if (names.empty() || i >= names.size()) {
                 return nullptr;
@@ -1513,7 +1511,7 @@ struct State {
 
             // Search for the name.
             auto child = parent->find<Object>(name);
-            
+
             if (child == nullptr) {
                 return nullptr;
             }
@@ -1701,23 +1699,50 @@ template <> struct Action<StructDecl> {
 
 template <> struct Action<VarTypeNamePart> {
     template <typename ActionInput> static void apply(const ActionInput& in, State& s) {
-        s.var_type_parts.emplace_back(in.string_view());
+        s.var_type.emplace_back(in.string_view());
     }
 };
 
 template <> struct Action<VarTypeName> {
     template <typename ActionInput> static void apply(const ActionInput& in, State& s) {
-        s.var_type = std::move(s.var_type_parts);
+        s.cur_type = s.lookup<Type>(s.var_type);
+
+        if (s.cur_type == nullptr) {
+            throw parse_error{"Can't find type with name '" + s.var_type.back() + "'", in};
+        }
+
+        s.var_type.clear();
     }
 };
 
 template <> struct Action<VarTypePtr> {
-    template <typename ActionInput> static void apply(const ActionInput& in, State& s) { ++s.var_type_ptr; }
+    template <typename ActionInput> static void apply(const ActionInput& in, State& s) { 
+        if (s.cur_type == nullptr) {
+            throw parse_error{"The current type is null", in};
+        }
+
+        s.cur_type = s.cur_type->ptr();
+    }
 };
 
-template <> struct Action<ArrayCount> {
+template <> struct Action<VarTypeArrayCount> {
     template <typename ActionInput> static void apply(const ActionInput& in, State& s) {
-        s.array_count = std::stoull(in.string(), nullptr, 0);
+        s.var_type_array_count = std::stoull(in.string(), nullptr, 0);
+    }
+};
+
+template <> struct Action<VarTypeArray> {
+    template <typename ActionInput> static void apply(const ActionInput& in, State& s) {
+        if (s.cur_type == nullptr) {
+            throw parse_error{"The current type is null", in};
+        }
+
+        if (!s.var_type_array_count) {
+            throw parse_error{"The array count is invalid", in};
+        }
+
+        s.cur_type = s.cur_type->array_(*s.var_type_array_count);
+        s.var_type_array_count = std::nullopt;
     }
 };
 
@@ -1739,13 +1764,6 @@ template <> struct Action<VarDecl> {
             throw parse_error{"Can't declare a variable outside of a struct", in};
         }
 
-        /*Variable* var{};
-
-        if (s.array_count) {
-            var = s.cur_struct->array_(s.var_name)->count(*s.array_count);
-        } else {
-            var = s.cur_struct->variable(s.var_name);
-        }*/
         auto var = s.cur_struct->variable(s.var_name);
 
         if (s.var_offset) {
@@ -1754,31 +1772,15 @@ template <> struct Action<VarDecl> {
             var->append();
         }
 
-        auto var_type = s.lookup<Type>(s.var_type);
-
-        if (var_type == nullptr) {
-            throw parse_error{"Can't find type with name '" + s.var_type.back() + "'", in};
-        }
-
-        if (s.array_count) {
-            var_type = var_type->array_(*s.array_count);
-        }
-        
-        var->type(var_type);
-
-        for (auto i = 0; i < s.var_type_ptr; ++i) {
-            var->type(var->type()->ptr());
-        }
+        var->type(s.cur_type);
 
         if (!s.metadata.empty()) {
             var->metadata() = std::move(s.metadata);
         }
 
-        s.var_type.clear();
-        s.var_type_ptr = 0;
-        s.array_count = std::nullopt;
         s.var_name.clear();
         s.var_offset = std::nullopt;
+        s.cur_type = nullptr;
     }
 };
 } // namespace parser

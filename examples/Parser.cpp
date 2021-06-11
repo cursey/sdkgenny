@@ -18,8 +18,8 @@ struct vec3
 
 constexpr auto g_usage_str = R"(
 # Add some basic types to the global namespace.
-type char 1 [[u8]]
-type int 4 [[s32]]
+type char 1 [[i8]]
+type int 4 [[i32]]
 type float 4 [[f32]]
 
 # Make an actual namespace.
@@ -44,6 +44,8 @@ namespace baz
 
 struct Qux
     foo.bar.Baz baz
+    char* str
+    char*[10] str_x_10
 
 namespace
 
@@ -56,6 +58,9 @@ struct OtherVec3
     float[3] xyz
     float* xyz_ptr
     int** xyz_ptr_ptr
+
+struct Mat4x3
+    float[4][3] m
 
 enum Color
     RED = 1
