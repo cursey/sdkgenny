@@ -346,7 +346,13 @@ public:
 
     auto count() const { return m_count; }
     auto count(size_t count) {
+        // Fix the name of this array type.
+        if (m_of != nullptr && count != m_count) {
+            m_name = m_of->name() + "[" + std::to_string(count) + "]";
+        }
+
         m_count = count;
+
         return this;
     }
 
@@ -373,7 +379,7 @@ protected:
 };
 
 inline Array* Type::array_(size_t count) {
-    return (Array*)m_owner->find_or_add<Array>(name() + "[" + std::to_string(count) + "]")->of(this)->count(count);
+    return (Array*)m_owner->find_or_add<Array>(name() + "[0]")->of(this)->count(count);
 }
 
 class GenericType : public Type {
