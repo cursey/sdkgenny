@@ -347,7 +347,16 @@ public:
     auto count(size_t count) {
         // Fix the name of this array type.
         if (m_of != nullptr && count != m_count) {
-            m_name = m_of->name() + "[" + std::to_string(count) + "]";
+            const auto& base = m_of->name();
+            auto first_brace = base.find_first_of('[');
+            auto head = base.substr(0, first_brace);
+            std::string tail{};
+
+            if (first_brace != std::string::npos) {
+                tail = base.substr(first_brace);
+            }
+
+            m_name = head + '[' + std::to_string(count) + ']' + tail;
         }
 
         m_count = count;
