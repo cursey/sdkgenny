@@ -1519,7 +1519,7 @@ struct State {
     std::vector<std::string> ns{};
 
     std::string type_name{};
-    size_t type_size{};
+    int type_size{};
 
     genny::Enum* cur_enum{};
     std::string enum_name{};
@@ -1632,7 +1632,7 @@ template <> struct Action<NsDecl> {
 
 template <> struct Action<TypeSize> {
     template <typename ActionInput> static void apply(const ActionInput& in, State& s) {
-        s.type_size = std::stoull(in.string(), nullptr, 0);
+        s.type_size = std::stoi(in.string(), nullptr, 0);
     }
 };
 
@@ -1693,7 +1693,7 @@ template <> struct Action<EnumDecl> {
 
 template <> struct Action<EnumVal> {
     template <typename ActionInput> static void apply(const ActionInput& in, State& s) {
-        s.enum_val = std::stoull(in.string(), nullptr, 0);
+        s.enum_val = std::stoul(in.string(), nullptr, 0);
     }
 };
 
