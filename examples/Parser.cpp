@@ -46,6 +46,8 @@ struct Qux
     foo.bar.Baz baz
     char* str
     char*[10] str_x_10
+    int add(int a, int b)
+    int sub(int a, int b, int* c)
 
 namespace
 
@@ -53,6 +55,8 @@ struct Vec3
     float x
     float y
     float z
+    float length()
+    Vec3 add(Vec3 other)
 
 struct OtherVec3
     float[3] xyz

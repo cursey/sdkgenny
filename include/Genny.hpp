@@ -597,17 +597,28 @@ public:
         return this;
     }
 
+    auto&& defined() const { return m_is_defined; }
+    auto defined(bool is_defined) {
+        m_is_defined = is_defined;
+        return this;
+    }
+
     virtual void generate(std::ostream& os) const {
         generate_prototype(os);
         os << ";\n";
     }
 
-    virtual void generate_source(std::ostream& os) const { generate_procedure(os); }
+    virtual void generate_source(std::ostream& os) const {
+        if (m_is_defined) {
+            generate_procedure(os);
+        }
+    }
 
 protected:
     Type* m_return_value{};
     std::string m_procedure{};
     std::unordered_set<Type*> m_dependent_types{};
+    bool m_is_defined{true};
 
     void generate_prototype(std::ostream& os) const {
         if (m_return_value == nullptr) {
@@ -1315,6 +1326,20 @@ protected:
             return;
         }
 
+        // Skip generating a source file for an object if the functions it does have are all undefined.
+        auto any_defined = false;
+
+        for (auto&& fn : obj->get_all<Function>()) {
+            if (fn->defined()) {
+                any_defined = true;
+                break;
+            }
+        }
+
+        if (!any_defined) {
+            return;
+        }
+
         auto obj_src_path = sdk_path / source_path_for_object(obj);
         std::filesystem::create_directories(obj_src_path.parent_path());
         std::ofstream os{obj_src_path};
@@ -1425,7 +1450,6 @@ struct Num : sor<HexNum, DecNum> {};
 
 // plus<printable characters not-including comma or closing square bracket>
 struct Metadata : plus<sor<range<32, 43>, range<45, 92>, range<94, 126>>> {};
-// struct Metadata : identifier {};
 struct MetadataDecl : seq<two<'['>, list<Metadata, one<','>, Sep>, two<']'>> {};
 
 struct NsId : TAO_PEGTL_STRING("namespace") {};
@@ -1459,23 +1483,25 @@ struct VarTypeName : list<VarTypeNamePart, one<'.'>> {};
 struct VarTypePtr : one<'*'> {};
 struct VarTypeArrayCount : Num {};
 struct VarTypeArray : seq<one<'['>, VarTypeArrayCount, one<']'>> {};
-
 struct VarType : seq<VarTypeName, star<sor<VarTypeArray, VarTypePtr>>> {};
-
 struct VarName : identifier {};
 struct VarOffset : Num {};
 struct VarOffsetDecl : seq<one<'@'>, Seps, VarOffset> {};
 struct VarDecl : seq<VarType, Seps, VarName, Seps, opt<VarOffsetDecl>, Seps, opt<MetadataDecl>> {};
 
-struct Decl : must<Seps, sor<NsDecl, TypeDecl, EnumDecl, EnumValDecl, StructDecl, VarDecl>, Seps> {};
+struct FnRetType : VarType {};
+struct FnName : identifier {};
+struct FnParamType : VarType {};
+struct FnParamName : identifier {};
+struct FnParam : seq<FnParamType, Seps, FnParamName> {};
+struct FnDecl : seq<FnRetType, Seps, FnName, one<'('>, opt<list<FnParam, one<','>, Sep>>, one<')'>> {};
+
+struct Decl : must<Seps, sor<NsDecl, TypeDecl, EnumDecl, EnumValDecl, StructDecl, FnDecl, VarDecl>, Seps> {};
 struct Grammar : until<eof, sor<eolf, Decl>> {};
 
 struct State {
     genny::Namespace* global_ns{};
     genny::Namespace* cur_ns{};
-    genny::Enum* cur_enum{};
-    genny::Struct* cur_struct{};
-    genny::Type* cur_type{};
 
     std::vector<std::string> metadata_parts{};
     std::vector<std::string> metadata{};
@@ -1486,19 +1512,33 @@ struct State {
     std::string type_name{};
     size_t type_size{};
 
+    genny::Enum* cur_enum{};
     std::string enum_name{};
     std::string enum_type{};
     bool enum_class{};
     std::string enum_val_name{};
     uint32_t enum_val{};
 
+    genny::Struct* cur_struct{};
     std::string struct_name{};
     std::vector<std::string> struct_parents{};
 
+    genny::Type* cur_type{};
     std::vector<std::string> var_type{};
     std::optional<size_t> var_type_array_count{};
     std::string var_name{};
     std::optional<uintptr_t> var_offset{};
+
+    genny::Type* fn_ret_type{};
+    std::string fn_name{};
+
+    struct Param {
+        genny::Type* type{};
+        std::string name{};
+    };
+
+    Param cur_param{};
+    std::vector<Param> fn_params{};
 
     // Searches for the type identified by a vector of names.
     template <typename T> T* lookup(const std::vector<std::string>& names) {
@@ -1781,6 +1821,52 @@ template <> struct Action<VarDecl> {
         s.var_name.clear();
         s.var_offset = std::nullopt;
         s.cur_type = nullptr;
+    }
+};
+
+template <> struct Action<FnRetType> {
+    template <typename ActionInput> static void apply(const ActionInput& in, State& s) {
+        s.fn_ret_type = s.cur_type;
+    }
+};
+
+template <> struct Action<FnName> {
+    template <typename ActionInput> static void apply(const ActionInput& in, State& s) { s.fn_name = in.string_view(); }
+};
+
+template <> struct Action<FnParamType> {
+    template <typename ActionInput> static void apply(const ActionInput& in, State& s) {
+        s.cur_param.type = s.cur_type;
+    }
+};
+
+template <> struct Action<FnParamName> {
+    template <typename ActionInput> static void apply(const ActionInput& in, State& s) {
+        s.cur_param.name = in.string_view();
+    }
+};
+
+template <> struct Action<FnParam> {
+    template <typename ActionInput> static void apply(const ActionInput& in, State& s) {
+        s.fn_params.emplace_back(std::move(s.cur_param));
+    }
+};
+
+template <> struct Action<FnDecl> {
+    template <typename ActionInput> static void apply(const ActionInput& in, State& s) {
+        if (s.cur_struct == nullptr) {
+            throw parse_error{"Can't declare a function outside of a struct", in};
+        }
+
+        auto fn = s.cur_struct->function(s.fn_name)->returns(s.fn_ret_type)->defined(false);
+
+        for (auto&& param : s.fn_params) {
+            fn->param(param.name)->type(param.type);
+        }
+
+        s.fn_name.clear();
+        s.fn_ret_type = nullptr;
+        s.fn_params.clear();
     }
 };
 } // namespace parser
