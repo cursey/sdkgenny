@@ -426,15 +426,27 @@ public:
         return this;
     }
 
-    // Sets the offset to be at the end of the owners current size.
-    //
-    // NOTE: This will increase the size of the owner by the size of this variable. If you are explicitly setting the
-    // size of your structs beforehand do not use this.
-    //
-    // NOTE: If you're using append for the very first variables added to a struct make sure you append before setting
-    // the type of the variable otherwise the variable's offset will be set after where you want it (due to itself
-    // already being considered part of the struct).
-    auto append() { return offset(owner<Type>()->size()); }
+    // Sets the offset to be after the last variable in the struct.
+    auto append() {
+        auto type = owner<Type>();
+        uintptr_t highest_offset{};
+        Variable* highest_var{};
+
+        for (auto&& var : type->get_all<Variable>()) {
+            if (var->offset() >= highest_offset && var != this) {
+                highest_offset = var->offset();
+                highest_var = var;
+            }
+        }
+
+        if (highest_var != nullptr) {
+            offset(highest_var->offset() + highest_var->size());
+        } else {
+            // This branch usually gets called on the first variable of a struct. We set it to type->size() because if
+            // its the first variable of a subclass we want this variable to be after the super clases variables.
+            offset(type->size());
+        }
+    }
 
     virtual size_t size() const {
         if (m_type == nullptr) {
