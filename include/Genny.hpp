@@ -1497,7 +1497,8 @@ struct StructName : identifier {};
 struct StructParent : identifier {};
 struct StructParentList : list<StructParent, one<','>, Sep> {};
 struct StructParentListDecl : seq<one<':'>, Seps, StructParentList> {};
-struct StructDecl : seq<StructId, Seps, StructName, Seps, opt<StructParentListDecl>> {};
+struct StructSize : Num {};
+struct StructDecl : seq<StructId, Seps, StructName, Seps, opt<StructParentListDecl>, Seps, opt<StructSize>> {};
 
 struct VarTypeNamePart : identifier {};
 struct VarTypeName : list<VarTypeNamePart, one<'.'>> {};
@@ -1543,6 +1544,7 @@ struct State {
     genny::Struct* cur_struct{};
     std::string struct_name{};
     std::vector<std::string> struct_parents{};
+    std::optional<size_t> struct_size{};
 
     genny::Type* cur_type{};
     std::vector<std::string> var_type{};
@@ -1739,6 +1741,12 @@ template <> struct Action<StructParent> {
     }
 };
 
+template <> struct Action<StructSize> {
+    template <typename ActionInput> static void apply(const ActionInput& in, State& s) {
+        s.struct_size = std::stoull(in.string(), nullptr, 0);
+    }
+};
+
 template <> struct Action<StructDecl> {
     template <typename ActionInput> static void apply(const ActionInput& in, State& s) {
         s.cur_struct = s.cur_ns->struct_(s.struct_name);
@@ -1753,8 +1761,13 @@ template <> struct Action<StructDecl> {
             s.cur_struct->parent(parent);
         }
 
+        if (s.struct_size) {
+            s.cur_struct->size(*s.struct_size);
+        }
+
         s.struct_name.clear();
         s.struct_parents.clear();
+        s.struct_size = std::nullopt;
         s.cur_enum = nullptr;
     }
 };
@@ -1779,7 +1792,7 @@ template <> struct Action<VarTypeName> {
 };
 
 template <> struct Action<VarTypePtr> {
-    template <typename ActionInput> static void apply(const ActionInput& in, State& s) { 
+    template <typename ActionInput> static void apply(const ActionInput& in, State& s) {
         if (s.cur_type == nullptr) {
             throw parse_error{"The current type is null", in};
         }
@@ -1861,9 +1874,7 @@ template <> struct Action<VarDecl> {
 };
 
 template <> struct Action<FnRetType> {
-    template <typename ActionInput> static void apply(const ActionInput& in, State& s) {
-        s.fn_ret_type = s.cur_type;
-    }
+    template <typename ActionInput> static void apply(const ActionInput& in, State& s) { s.fn_ret_type = s.cur_type; }
 };
 
 template <> struct Action<FnName> {

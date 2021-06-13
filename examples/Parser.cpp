@@ -26,7 +26,7 @@ type float 4 [[f32]]
 namespace foo.bar
 
 # Make a class in the namespace.
-struct Foo
+struct Foo 0x10
     # Add some members.
     int a @ 0 [[u32]]
     float b
