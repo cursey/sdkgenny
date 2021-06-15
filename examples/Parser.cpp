@@ -84,6 +84,18 @@ enum class Speed : int
     FAST = 65
 )";
 
+constexpr auto g_ns_bug = R"(
+type int 4
+
+namespace qux
+struct foo
+    int a
+
+namespace bar
+    struct baz : qux.foo
+        int b
+)";
+
 namespace pegtl = tao::pegtl;
 
 int main(int argc, char* argv[]) {
@@ -94,6 +106,7 @@ int main(int argc, char* argv[]) {
     //pegtl::string_input in{"float type 4", "example_string"};
     //pegtl::string_input in{g_example_str, "example_string"};
     pegtl::string_input in{g_usage_str, "usage_str"};
+    //pegtl::string_input in{g_ns_bug, "ns_bug_str"};
 
     try {
         auto r = pegtl::parse<genny::parser::Grammar, genny::parser::Action>(in, s);
