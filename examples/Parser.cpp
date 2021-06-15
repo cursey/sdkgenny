@@ -32,7 +32,7 @@ struct Foo 0x10
     float b
 
 # Make a subclass.
-struct Bar : Foo 
+struct Bar : Foo 0x20
     # Add a member after 'b'.
     int c
 
