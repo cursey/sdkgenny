@@ -71,6 +71,8 @@ enum Color
     BLUE = 2
     GREEN = 0x3
 
+namespace enums
+
 enum Size : char
     SMALL = 0
     MEDIUM = 1
@@ -78,7 +80,7 @@ enum Size : char
     XLARGE = 3
     XXLARGE = 4
 
-enum class Speed : int 
+enum class Speed : int
     SLOW = 25 
     MEDIUM = 40
     FAST = 65
