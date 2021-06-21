@@ -4,17 +4,15 @@ int main(int argc, char* argv[]) {
     genny::Sdk sdk{};
     auto g = sdk.global_ns();
 
-    g->type("unsigned short")->size(2);
+    auto ushort = g->type("unsigned short")->size(2);
 
     // Generate the Date struct described @ https://docs.microsoft.com/en-us/cpp/cpp/cpp-bit-fields
     auto date = g->struct_("Date");
-    auto bf = date->bitfield(0);
-    
-    bf->type("unsigned short");
-    bf->field("nWeekDay")->offset(0)->size(3);
-    bf->field("nMonthDay")->offset(3)->size(6);
-    bf->field("nMonth")->offset(bf->field("nMonthDay")->end())->size(5);
-    bf->field("nYear")->offset(16)->size(8);
+
+    date->variable("nWeekDay")->type(ushort)->bit_size(3)->append()->bit_append();
+    date->variable("nMonthDay")->type(ushort)->bit_size(6)->append()->bit_append();
+    date->variable("nMonth")->type(ushort)->bit_size(5)->append()->bit_append();
+    date->variable("nYear")->type(ushort)->bit_size(8)->append()->bit_append();
 
     sdk.generate(std::filesystem::current_path() / "bitfield_sdk");
 

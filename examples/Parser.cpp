@@ -85,24 +85,16 @@ enum class Speed : int
     MEDIUM = 40
     FAST = 65
 
+namespace 
+
 type uint16_t 2 [[u16]]
 
 struct Date
-    bitfield uint16_t @ 0
-        nWeekDay : 3
-        nMonthDay : 6
-        nMonth : 5
-        nYear : 8
-)";
-
-constexpr auto g_bitfield = R"(
-type uint16_t 2 [[u16]]
-struct Date
-    bitfield uint16_t @ 0
-        nWeekDay : 3
-        nMonthDay : 6
-        nMonth : 5
-        nYear : 8
+    uint16_t nWeekDay : 3
+    uint16_t nMonthDay : 6
+    uint16_t nMonth : 5
+    uint16_t nYear : 8
+    Vec3 v
 )";
 
 constexpr auto g_ns_bug = R"(
@@ -128,7 +120,6 @@ int main(int argc, char* argv[]) {
     //pegtl::string_input in{g_example_str, "example_string"};
     pegtl::string_input in{g_usage_str, "usage_str"};
     //pegtl::string_input in{g_ns_bug, "ns_bug_str"};
-    //pegtl::string_input in{g_bitfield, "bitfield_str"};
 
     try {
         auto r = pegtl::parse<genny::parser::Grammar, genny::parser::Action>(in, s);
