@@ -9,92 +9,123 @@ type float 4
 type double 8
 
 struct vec3
-    float x @ 0 # omg thats @ 0
-    float y # This will follow the x variable and land @ 4
-    float z # This will follow y and land @ 8
+    float x @ 0 // omg thats @ 0
+    float y // This will follow the x variable and land @ 4
+    float z // This will follow y and land @ 8
 
-# The total size will be... 12!
+// The total size will be... 12!
 )";
 
 constexpr auto g_usage_str = R"(
-# Add some basic types to the global namespace.
-type char 1 [[i8]]
-type int 4 [[i32]]
+// Add some basic types to the global namespace.
+type char 1 [[i8 ]]
+type int 4 [[ i32]]
 type float 4 [[f32]]
 
-# Make an actual namespace.
-namespace foo.bar
+// Make an actual namespace.
+namespace foo.bar {
 
-# Make a class in the namespace.
-struct Foo 0x10
-    # Add some members.
+// Make a class in the namespace.
+struct Foo 0x10 {
+    // Add some members.
     int a @ 0 [[u32]]
     float b
+}
 
-# Make a subclass.
-struct Bar : Foo 0x20
-    # Add a member after 'b'.
+// Make a subclass.
+struct Bar : Foo 0x20 {
+    // Add a member after 'b'.
     int c
+}
 
-# Make a subclass with multiple parents.
-struct Baz : Foo, Bar
-    float d
+// Make a subclass with multiple parents.
+struct Baz : Foo, Bar {
+    float d 
+}
+}
 
-namespace baz
+namespace baz {
 
-struct Qux
+
+/* this is a cool struct
+ * and this is a long comment
+ * how neat. */
+struct Qux  { 
     foo.bar.Baz baz
     char* str
     char*[10] str_x_10
-    int add(int a, int b)
+    int add(int a, /* bad place for a comment but w/e */ int b)   
     int sub(int a, int b, int* c)
+}
 
-namespace
+}
 
-struct Vec3
+struct Vec3 {
     float x
     float y
     float z
-    float length()
-    Vec3 add(Vec3 other)
+    float length    ( )
+    Vec3 add( Vec3 other )
+}
 
-struct OtherVec3
+struct OtherVec3 {
     float[3] xyz
     float* xyz_ptr
-    int** xyz_ptr_ptr
+    int** xyz_ptr_ptr // woah
+}
 
-struct Mat4x3
+struct Mat4x3 {
     float[4][3] m
+}
 
-enum Color
-    RED = 1
-    BLUE = 2
+enum Color {
+    RED = 1,
+    BLUE = 2,
     GREEN = 0x3
+}
 
-namespace enums
+namespace enums {
+    
+enum Size : char {
+    SMALL = 0,
+    MEDIUM = 1,
+    LARGE = 2,
+    XLARGE = 3,
+    XXLARGE = 4,
+}
 
-enum Size : char
-    SMALL = 0
-    MEDIUM = 1
-    LARGE = 2
-    XLARGE = 3
-    XXLARGE = 4
-
-enum class Speed : int
-    SLOW = 25 
-    MEDIUM = 40
+enum class Speed : int {
+    SLOW = 25,
+    MEDIUM = 40,
     FAST = 65
-
-namespace 
+}
+}
 
 type uint16_t 2 [[u16]]
 
-struct Date
+struct Date {
     uint16_t nWeekDay : 3
     uint16_t nMonthDay : 6
     uint16_t nMonth : 5
     uint16_t nYear : 8
     Vec3 v
+}
+
+struct Nested {
+    enum Enum {
+        HELLO = 0,
+        WORLD = 1,
+    }
+
+    struct Struct {
+        int a
+        int b
+        int c
+    }
+
+    Enum enum_
+    Struct struct_
+}
 )";
 
 constexpr auto g_ns_bug = R"(
@@ -107,6 +138,43 @@ struct foo
 namespace bar
     struct baz : qux.foo
         int b
+
+namespace   
+    struct quux
+        int c
+)";
+
+constexpr auto g_new = R"(
+type int 4
+type char 1
+
+namespace enums {
+enum Size : char {
+    SMALL = 0,
+    MEDIUM = 1,
+    LARGE = 2,
+    XLARGE = 3,
+    XXLARGE = 4
+}
+
+namespace this_enum.is.nested.deep {
+
+    enum class Speed : int {
+        SLOW = 25,
+        MEDIUM = 40,    
+        FAST = 65
+    }
+
+}
+}
+
+namespace structs {
+struct Vec3i {
+    int x
+    int y
+    int z
+}
+}
 )";
 
 namespace pegtl = tao::pegtl;
@@ -114,12 +182,14 @@ namespace pegtl = tao::pegtl;
 int main(int argc, char* argv[]) {
     genny::Sdk sdk{};
     genny::parser::State s{};
-    s.global_ns = s.cur_ns = sdk.global_ns();
+    //s.global_ns = s.cur_ns = sdk.global_ns();
+    s.parents.push_back(sdk.global_ns());
 
     //pegtl::string_input in{"float type 4", "example_string"};
     //pegtl::string_input in{g_example_str, "example_string"};
     pegtl::string_input in{g_usage_str, "usage_str"};
     //pegtl::string_input in{g_ns_bug, "ns_bug_str"};
+    //pegtl::string_input in{g_new, "new_str"};
 
     try {
         auto r = pegtl::parse<genny::parser::Grammar, genny::parser::Action>(in, s);
