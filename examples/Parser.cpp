@@ -126,6 +126,10 @@ struct Nested {
     Enum enum_
     Struct struct_
 }
+
+class CoolClass {
+    Nested nest
+}
 )";
 
 constexpr auto g_ns_bug = R"(
