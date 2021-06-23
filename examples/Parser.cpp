@@ -18,7 +18,7 @@ struct vec3
 
 constexpr auto g_usage_str = R"(
 // Add some basic types to the global namespace.
-type char 1 [[i8 ]]
+type char 1 [[i8 ]];
 type int 4 [[ i32]]
 type float 4 [[f32]]
 
@@ -30,7 +30,7 @@ struct Foo 0x10 {
     // Add some members.
     int a @ 0 [[u32]]
     float b
-}
+};
 
 // Make a subclass.
 struct Bar : Foo 0x20 {
@@ -53,7 +53,7 @@ namespace baz {
 struct Qux  { 
     foo.bar.Baz baz
     char* str
-    char*[10] str_x_10
+    char* str_array[10];
     int add(int a, /* bad place for a comment but w/e */ int b)   
     int sub(int a, int b, int* c)
 }
@@ -61,21 +61,23 @@ struct Qux  {
 }
 
 struct Vec3 {
-    float x
-    float y
-    float z
-    float length    ( )
-    Vec3 add( Vec3 other )
-}
+    float x;
+    float y;
+    float z;
+    float length    ( );
+    Vec3 add( Vec3 other );
+};
 
 struct OtherVec3 {
-    float[3] xyz
+    float xyz[3]
     float* xyz_ptr
     int** xyz_ptr_ptr // woah
 }
 
 struct Mat4x3 {
-    float[4][3] m
+    float m[4][3]
+    float[4] n[3]; // Very strange.
+    float[4][3] o
 }
 
 enum Color {
@@ -98,7 +100,7 @@ enum class Speed : int {
     SLOW = 25,
     MEDIUM = 40,
     FAST = 65
-}
+};
 }
 
 type uint16_t 2 [[u16]]
