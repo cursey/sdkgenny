@@ -121,8 +121,8 @@ struct Nested {
 
     struct Struct {
         int a
-        int b
-        int c
+        int b +4
+        int c +8
     }
 
     Enum enum_
