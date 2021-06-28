@@ -66,6 +66,7 @@ struct Vec3 {
     float z;
     float length    ( );
     Vec3 add( Vec3 other );
+    static Vec3 zero();
 };
 
 struct OtherVec3 {
