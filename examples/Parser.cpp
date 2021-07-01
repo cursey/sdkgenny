@@ -184,6 +184,26 @@ struct Vec3i {
 }
 )";
 
+constexpr auto g_include = R"(
+#include "types.genny"
+
+struct Vec3f {
+    float x
+    float y
+    float z
+}
+
+struct Vec3i {
+    int x
+    int y
+    int z
+}
+
+struct Baz : foobar.Bar {
+    int c
+}
+)";
+
 namespace pegtl = tao::pegtl;
 
 int main(int argc, char* argv[]) {
@@ -197,6 +217,7 @@ int main(int argc, char* argv[]) {
     pegtl::string_input in{g_usage_str, "usage_str"};
     //pegtl::string_input in{g_ns_bug, "ns_bug_str"};
     //pegtl::string_input in{g_new, "new_str"};
+    //pegtl::string_input in{g_include, "include_str"};
 
     try {
         auto r = pegtl::parse<genny::parser::Grammar, genny::parser::Action>(in, s);
