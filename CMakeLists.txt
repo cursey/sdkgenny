@@ -31,7 +31,7 @@ option(BUILD_PARSER_EXAMPLE "Build the example that uses GennyParser.hpp")
 
 if(BUILD_PARSER_EXAMPLE)
     find_package(pegtl CONFIG REQUIRED)
-    add_executable(example_parser "examples/Parser.cpp")
+    add_executable(example_parser "examples/Parser.cpp" "include/Genny.hpp")
     target_compile_features(example_parser PRIVATE cxx_std_17)
     target_include_directories(example_parser PRIVATE "include/")
     target_link_libraries(example_parser PRIVATE taocpp::pegtl)
