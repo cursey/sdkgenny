@@ -208,6 +208,10 @@ namespace pegtl = tao::pegtl;
 
 int main(int argc, char* argv[]) {
     genny::Sdk sdk{};
+
+    sdk.header_extension(".hxx");
+    sdk.source_extension(".cxx");
+
     genny::parser::State s{};
     //s.global_ns = s.cur_ns = sdk.global_ns();
     s.parents.push_back(sdk.global_ns());
