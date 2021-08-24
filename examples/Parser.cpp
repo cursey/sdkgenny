@@ -132,6 +132,7 @@ struct Nested {
 
 class CoolClass {
     Nested nest
+    virtual int say_hi(char* name)
 }
 )";
 
@@ -234,6 +235,8 @@ int main(int argc, char* argv[]) {
     auto sdk_path = std::filesystem::current_path() / "parser_sdk";
     std::filesystem::remove_all(sdk_path);
     sdk.generate(sdk_path);
+
+    std::cout << sdk_path.string() << std::endl;
 
     return 0;
 }

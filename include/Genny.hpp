@@ -1574,7 +1574,9 @@ struct FnParam : seq<FnParamType, Seps, FnParamName> {};
 struct FnParamList : list_must<FnParam, one<','>, Sep> {};
 struct FnParams : if_must<one<'('>, Seps, opt<FnParamList>, Seps, one<')'>> {};
 struct FnStaticId : TAO_PEGTL_STRING("static") {};
-struct FnDecl : seq<opt<FnStaticId>, Seps, FnRetType, Seps, FnName, Seps, FnParams, Endl> {};
+struct FnVirtualId : TAO_PEGTL_STRING("virtual") {};
+struct FnPrefix : sor<FnStaticId, FnVirtualId> {};
+struct FnDecl : seq<opt<FnPrefix>, Seps, FnRetType, Seps, FnName, Seps, FnParams, Endl> {};
 
 struct Decl : sor<IncludeDecl, TypeDecl, NsExpr, EnumExpr, StructExpr> {};
 struct Grammar : until<eof, sor<eolf, Sep, Decl>> {};
@@ -1621,6 +1623,7 @@ struct State {
     genny::Type* fn_ret_type{};
     std::string fn_name{};
     bool fn_is_static{};
+    bool fn_is_virtual{};
 
     struct Param {
         genny::Type* type{};
@@ -2074,6 +2077,10 @@ template <> struct Action<FnStaticId> {
     template <typename ActionInput> static void apply(const ActionInput& in, State& s) { s.fn_is_static = true; }
 };
 
+template <> struct Action<FnVirtualId> {
+    template <typename ActionInput> static void apply(const ActionInput& in, State& s) { s.fn_is_virtual = true; }
+};
+
 template <> struct Action<FnDecl> {
     template <typename ActionInput> static void apply(const ActionInput& in, State& s) {
         if (auto struct_ = dynamic_cast<Struct*>(s.parents.back())) {
@@ -2081,6 +2088,8 @@ template <> struct Action<FnDecl> {
 
             if (s.fn_is_static) {
                 fn = struct_->static_function(s.fn_name);
+            } else if (s.fn_is_virtual) {
+                fn = struct_->virtual_function(s.fn_name);
             } else {
                 fn = struct_->function(s.fn_name);
             }
@@ -2095,6 +2104,7 @@ template <> struct Action<FnDecl> {
             s.fn_ret_type = nullptr;
             s.fn_params.clear();
             s.fn_is_static = false;
+            s.fn_is_virtual = false;
         } else {
             throw parse_error{"Can't declare a function outside of a struct", in};
         }
