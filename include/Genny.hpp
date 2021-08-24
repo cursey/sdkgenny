@@ -1566,7 +1566,9 @@ struct VarBitSizeDecl : seq<one<':'>, Seps, VarBitSize> {};
 struct VarDecl : seq<VarType, Seps, VarName, star<VarTypeArray>, Seps, opt<VarBitSizeDecl>, Seps,
                      opt<VarOffsetDeltaDecl>, Seps, opt<MetadataDecl>, Endl> {};
 
+struct FnVoidId : TAO_PEGTL_STRING("void") {};
 struct FnRetType : VarType {};
+struct FnRet : sor<FnVoidId, FnRetType> {};
 struct FnName : identifier {};
 struct FnParamType : VarType {};
 struct FnParamName : identifier {};
@@ -1576,7 +1578,7 @@ struct FnParams : if_must<one<'('>, Seps, opt<FnParamList>, Seps, one<')'>> {};
 struct FnStaticId : TAO_PEGTL_STRING("static") {};
 struct FnVirtualId : TAO_PEGTL_STRING("virtual") {};
 struct FnPrefix : sor<FnStaticId, FnVirtualId> {};
-struct FnDecl : seq<opt<FnPrefix>, Seps, FnRetType, Seps, FnName, Seps, FnParams, Endl> {};
+struct FnDecl : seq<opt<FnPrefix>, Seps, FnRet, Seps, FnName, Seps, FnParams, Endl> {};
 
 struct Decl : sor<IncludeDecl, TypeDecl, NsExpr, EnumExpr, StructExpr> {};
 struct Grammar : until<eof, sor<eolf, Sep, Decl>> {};
@@ -2094,7 +2096,11 @@ template <> struct Action<FnDecl> {
                 fn = struct_->function(s.fn_name);
             }
 
-            fn->returns(s.fn_ret_type)->defined(false);
+            if (s.fn_ret_type) {
+                fn->returns(s.fn_ret_type);
+            }
+
+            fn->defined(false);
 
             for (auto&& param : s.fn_params) {
                 fn->param(param.name)->type(param.type);
