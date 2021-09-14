@@ -71,7 +71,7 @@ private:
 class Object {
 public:
     Object() = delete;
-    Object(std::string_view name) : m_name{name} {}
+    explicit Object(std::string_view name) : m_name{name} {}
     virtual ~Object() = default;
 
     const auto& name() const { return m_name; }
@@ -259,7 +259,7 @@ template <typename T> T* cast(const Object* object) {
 
 class Typename : public Object {
 public:
-    Typename(std::string_view name) : Object{name} {}
+    explicit Typename(std::string_view name) : Object{name} {}
 
     virtual const std::string get_typename() const { return m_name; }
 
@@ -281,7 +281,7 @@ public:
 
 class Type : public Typename {
 public:
-    Type(std::string_view name) : Typename{name} {}
+    explicit Type(std::string_view name) : Typename{name} {}
 
     virtual void generate_variable_postamble(std::ostream& os) const {}
 
@@ -301,7 +301,7 @@ protected:
 
 class Reference : public Type {
 public:
-    Reference(std::string_view name) : Type{name} {}
+    explicit Reference(std::string_view name) : Type{name} {}
 
     auto to() const { return m_to; }
     auto to(Type* to) {
@@ -326,7 +326,7 @@ inline Reference* Type::ref() {
 
 class Pointer : public Reference {
 public:
-    Pointer(std::string_view name) : Reference{name} {}
+    explicit Pointer(std::string_view name) : Reference{name} {}
 
     auto ptr() { return m_owner->find_or_add<Pointer>(m_name + '*')->to(this); }
 
@@ -342,7 +342,7 @@ inline Pointer* Type::ptr() {
 
 class Array : public Type {
 public:
-    Array(std::string_view name) : Type{name} {}
+    explicit Array(std::string_view name) : Type{name} {}
 
     auto of() const { return m_of; }
     auto of(Type* of) {
@@ -399,7 +399,7 @@ inline Array* Type::array_(size_t count) {
 
 class GenericType : public Type {
 public:
-    GenericType(std::string_view name) : Type{name} {}
+    explicit GenericType(std::string_view name) : Type{name} {}
 
     auto template_types() const { return m_template_types; }
     auto template_type(Type* type) {
@@ -413,7 +413,7 @@ protected:
 
 class Variable : public Object {
 public:
-    Variable(std::string_view name) : Object{name} {}
+    explicit Variable(std::string_view name) : Object{name} {}
 
     auto type() const { return m_type; }
     auto type(Type* type) {
@@ -487,7 +487,7 @@ protected:
 
 class Parameter : public Object {
 public:
-    Parameter(std::string_view name) : Object{name} {}
+    explicit Parameter(std::string_view name) : Object{name} {}
 
     auto type() const { return m_type; }
     auto type(Type* type) {
@@ -506,7 +506,7 @@ protected:
 
 class Function : public Object {
 public:
-    Function(std::string_view name) : Object{name} {}
+    explicit Function(std::string_view name) : Object{name} {}
 
     auto param(std::string_view name) { return find_or_add<Parameter>(name); }
 
@@ -625,7 +625,7 @@ protected:
 
 class VirtualFunction : public Function {
 public:
-    VirtualFunction(std::string_view name) : Function{name} {}
+    explicit VirtualFunction(std::string_view name) : Function{name} {}
 
     auto vtable_index() const { return m_vtable_index; }
     auto vtable_index(int vtable_index) {
@@ -648,7 +648,7 @@ protected:
 
 class StaticFunction : public Function {
 public:
-    StaticFunction(std::string_view name) : Function{name} {}
+    explicit StaticFunction(std::string_view name) : Function{name} {}
 
     void generate(std::ostream& os) const override {
         os << "static ";
@@ -659,7 +659,7 @@ public:
 
 class Enum : public Type {
 public:
-    Enum(std::string_view name) : Type{name} {}
+    explicit Enum(std::string_view name) : Type{name} {}
 
     auto value(std::string_view name, uint64_t value) {
         for (auto&& [val_name, val_val] : m_values) {
@@ -720,7 +720,7 @@ protected:
 
 class EnumClass : public Enum {
 public:
-    EnumClass(std::string_view name) : Enum{name} {}
+    explicit EnumClass(std::string_view name) : Enum{name} {}
 
     void generate(std::ostream& os) const override {
         os << "enum class " << m_name;
@@ -733,7 +733,7 @@ public:
 
 class Struct : public Type {
 public:
-    Struct(std::string_view name) : Type{name} {}
+    explicit Struct(std::string_view name) : Type{name} {}
 
     auto variable(std::string_view name) { return find_or_add_unique<Variable>(name); }
 
@@ -1092,7 +1092,7 @@ inline Variable* Variable::bit_append() {
 
 class Class : public Struct {
 public:
-    Class(std::string_view name) : Struct{name} {}
+    explicit Class(std::string_view name) : Struct{name} {}
 
     void generate_forward_decl(std::ostream& os) const override { os << "class " << m_name << ";\n"; }
 
@@ -1108,7 +1108,7 @@ public:
 
 class Namespace : public Typename {
 public:
-    Namespace(std::string_view name) : Typename{name} {}
+    explicit Namespace(std::string_view name) : Typename{name} {}
 
     auto type(std::string_view name) { return find_in_owners_or_add<Type>(name); }
     auto generic_type(std::string_view name) { return find_in_owners_or_add<GenericType>(name); }
