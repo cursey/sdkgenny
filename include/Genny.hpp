@@ -46,7 +46,7 @@ public:
     explicit Indent(std::ostream& dest, int indent = 4) : m_dest{dest.rdbuf()}, m_indent(indent, ' '), m_owner{&dest} {
         m_owner->rdbuf(this);
     }
-    virtual ~Indent() {
+    ~Indent() override {
         if (m_owner != nullptr) {
             m_owner->rdbuf(m_dest);
         }
