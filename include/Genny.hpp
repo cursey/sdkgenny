@@ -164,33 +164,17 @@ public:
     }
 
     template <typename T> bool has_any() const {
-        for (auto&& child : m_children) {
-            if (child->is_a<T>()) {
-                return true;
-            }
-        }
-
-        return false;
+        return std::any_of(m_children.cbegin(), m_children.cend(), [](const auto& child) { return child->is_a<T>(); });
     }
 
     template <typename T> bool has_any_in_children() const {
-        for (auto&& child : m_children) {
-            if (child->is_a<T>() || child->has_any_in_children<T>()) {
-                return true;
-            }
-        }
-
-        return false;
+        return std::any_of(m_children.cbegin(), m_children.cend(),
+            [](const auto& child) { return child->is_a<T>() || child->has_any_in_children<T>(); });
     }
 
     template <typename T> bool is_child_of(T* obj) const {
-        for (auto&& owner : owners<T>()) {
-            if (owner == obj) {
-                return true;
-            }
-        }
-
-        return false;
+        const auto o = owners<T>();
+        return std::any_of(o.cbegin(), o.cend(), [obj](const auto& owner) { return owner == obj; });
     }
 
     template <typename T> T* add(std::unique_ptr<T> object) {
