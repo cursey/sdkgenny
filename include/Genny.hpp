@@ -243,7 +243,7 @@ protected:
         for (auto&& c : desired_name) {
             if (c == ' ') {
                 name += '_';
-            } else if (isalnum(c) || c == '_') {
+            } else {
                 name += c;
             } 
         }
