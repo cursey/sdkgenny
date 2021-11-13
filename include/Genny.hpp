@@ -71,12 +71,12 @@ private:
 class Object {
 public:
     Object() = delete;
-    explicit Object(std::string_view name) : m_name{name} {}
+    explicit Object(std::string_view name) : m_name{fix_name(name)} {}
     virtual ~Object() = default;
 
     const auto& name() const { return m_name; }
     auto name(std::string name) {
-        m_name = std::move(name);
+        m_name = fix_name(name);
         return this;
     }
 
@@ -231,6 +231,27 @@ protected:
     std::string m_name{};
     std::vector<std::unique_ptr<Object>> m_children{};
     std::vector<std::string> m_metadata{};
+
+    // Will fix up a desired name so that it's usable as a C++ identifier. Things like spaces get converted to
+    // underscores, and we make sure it doesn't begin with a number. More checks could be done here in the future if
+    // necessary.
+    std::string fix_name(std::string_view desired_name) {
+        std::string name{};
+
+        for (auto&& c : desired_name) {
+            if (c == ' ') {
+                name += '_';
+            } else if (isalnum(c)) {
+                name += c;
+            }
+        }
+
+        if (!name.empty() && isdigit(name[0])) {
+            name = "_" + name;
+        }
+
+        return name;
+    }
 };
 
 template <typename T> T* cast(const Object* object) {
@@ -407,7 +428,7 @@ public:
 
     // Helper that recurses though owners to find the correct type.
     auto type(std::string_view name) {
-        m_type = find_in_owners_or_add<Type>(name);
+        m_type = find_in_owners_or_add<Type>(fix_name(name));
         return this;
     }
 
