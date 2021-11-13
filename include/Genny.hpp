@@ -182,7 +182,9 @@ public:
         return (T*)m_children.emplace_back(std::move(object)).get();
     }
 
-    template <typename T> T* find(std::string_view name) const {
+    template <typename T> T* find(std::string_view desired_name) const {
+        auto name = fix_name(desired_name);
+
         for (auto&& child : m_children) {
             if (child->is_a<T>() && child->m_name == name) {
                 return (T*)child.get();
@@ -235,7 +237,7 @@ protected:
     // Will fix up a desired name so that it's usable as a C++ identifier. Things like spaces get converted to
     // underscores, and we make sure it doesn't begin with a number. More checks could be done here in the future if
     // necessary.
-    std::string fix_name(std::string_view desired_name) {
+    std::string fix_name(std::string_view desired_name) const {
         std::string name{};
 
         for (auto&& c : desired_name) {
@@ -428,7 +430,7 @@ public:
 
     // Helper that recurses though owners to find the correct type.
     auto type(std::string_view name) {
-        m_type = find_in_owners_or_add<Type>(fix_name(name));
+        m_type = find_in_owners_or_add<Type>(name);
         return this;
     }
 
