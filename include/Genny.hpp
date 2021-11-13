@@ -241,9 +241,9 @@ protected:
         for (auto&& c : desired_name) {
             if (c == ' ') {
                 name += '_';
-            } else if (isalnum(c)) {
+            } else if (isalnum(c) || c == '_') {
                 name += c;
-            }
+            } 
         }
 
         if (!name.empty() && isdigit(name[0])) {
