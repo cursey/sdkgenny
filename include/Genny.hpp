@@ -71,12 +71,12 @@ private:
 class Object {
 public:
     Object() = delete;
-    explicit Object(std::string_view name) : m_name{fix_name(name)} {}
+    explicit Object(std::string_view name) : m_name{name} {}
     virtual ~Object() = default;
 
     const auto& name() const { return m_name; }
     auto name(std::string name) {
-        m_name = fix_name(name);
+        m_name = std::move(name);
         return this;
     }
 
@@ -182,9 +182,7 @@ public:
         return (T*)m_children.emplace_back(std::move(object)).get();
     }
 
-    template <typename T> T* find(std::string_view desired_name) const {
-        auto name = fix_name(desired_name);
-
+    template <typename T> T* find(std::string_view name) const {
         for (auto&& child : m_children) {
             if (child->is_a<T>() && child->m_name == name) {
                 return (T*)child.get();
@@ -225,6 +223,7 @@ public:
 protected:
     friend class Type;
     friend class Pointer;
+    friend class Function;
     friend class Namespace;
     friend class Sdk;
 
@@ -237,10 +236,10 @@ protected:
     // Will fix up a desired name so that it's usable as a C++ identifier. Things like spaces get converted to
     // underscores, and we make sure it doesn't begin with a number. More checks could be done here in the future if
     // necessary.
-    std::string fix_name(std::string_view desired_name) const {
+    virtual std::string usable_name() const {
         std::string name{};
 
-        for (auto&& c : desired_name) {
+        for (auto&& c : m_name) {
             if (c == ' ') {
                 name += '_';
             } else {
@@ -268,12 +267,10 @@ class Typename : public Object {
 public:
     explicit Typename(std::string_view name) : Object{name} {}
 
-    virtual const std::string get_typename() const { return m_name; }
-
     virtual void generate_typename_for(std::ostream& os, const Object* obj) const {
         if (auto owner_type = owner<Typename>()) {
             if (obj == nullptr || owner_type != obj->owner<Typename>()) {
-                auto&& name = owner_type->get_typename();
+                auto&& name = owner_type->name();
 
                 if (!name.empty()) {
                     owner_type->generate_typename_for(os, obj);
@@ -282,7 +279,7 @@ public:
             }
         }
 
-        os << get_typename();
+        os << usable_name();
     }
 };
 
@@ -475,7 +472,7 @@ public:
     virtual void generate(std::ostream& os) const {
         generate_metadata(os);
         m_type->generate_typename_for(os, this);
-        os << " " << m_name;
+        os << " " << usable_name();
         m_type->generate_variable_postamble(os);
 
         if (m_bit_size != 0) {
@@ -504,7 +501,7 @@ public:
 
     virtual void generate(std::ostream& os) const {
         m_type->generate_typename_for(os, this);
-        os << " " << m_name;
+        os << " " << usable_name();
     }
 
 protected:
@@ -570,7 +567,7 @@ protected:
     }
 
     void generate_prototype_internal(std::ostream& os) const {
-        os << m_name << "(";
+        os << usable_name() << "(";
 
         auto is_first_param = true;
 
@@ -605,11 +602,11 @@ protected:
         std::reverse(owners.begin(), owners.end());
 
         for (auto&& o : owners) {
-            if (o->name().empty()) {
+            if (o->usable_name().empty()) {
                 continue;
             }
 
-            os << o->name() << "::";
+            os << o->usable_name() << "::";
         }
 
         generate_prototype_internal(os);
@@ -698,7 +695,7 @@ public:
     }
 
     virtual void generate(std::ostream& os) const {
-        os << "enum " << m_name;
+        os << "enum " << usable_name();
         generate_type(os);
         os << " {\n";
         generate_enums(os);
@@ -730,7 +727,7 @@ public:
     explicit EnumClass(std::string_view name) : Enum{name} {}
 
     void generate(std::ostream& os) const override {
-        os << "enum class " << m_name;
+        os << "enum class " << usable_name();
         generate_type(os);
         os << " {\n";
         generate_enums(os);
@@ -803,11 +800,11 @@ public:
         return this;
     }
 
-    virtual void generate_forward_decl(std::ostream& os) const { os << "struct " << m_name << ";\n"; }
+    virtual void generate_forward_decl(std::ostream& os) const { os << "struct " << usable_name() << ";\n"; }
 
     virtual void generate(std::ostream& os) const {
         generate_metadata(os);
-        os << "struct " << m_name;
+        os << "struct " << usable_name();
         generate_inheritance(os);
         os << " {\n";
         generate_internal(os);
@@ -1024,7 +1021,7 @@ protected:
                 } else {
                     // Generate a default destructor to force addition of the vtable ptr.
                     if (vtable_index == 0) {
-                        os << "virtual ~" << m_name << "() = default;\n";
+                        os << "virtual ~" << usable_name() << "() = default;\n";
                     } else {
                         os << "virtual void virtual_function_" << std::dec << vtable_index << "() = 0;\n";
                     }
@@ -1114,10 +1111,10 @@ class Class : public Struct {
 public:
     explicit Class(std::string_view name) : Struct{name} {}
 
-    void generate_forward_decl(std::ostream& os) const override { os << "class " << m_name << ";\n"; }
+    void generate_forward_decl(std::ostream& os) const override { os << "class " << usable_name() << ";\n"; }
 
     void generate(std::ostream& os) const override {
-        os << "class " << m_name;
+        os << "class " << usable_name();
         generate_inheritance(os);
         os << " {\n";
         os << "public:\n";
@@ -1199,14 +1196,14 @@ protected:
         std::reverse(owners.begin(), owners.end());
 
         for (auto&& owner : owners) {
-            if (owner->name().empty()) {
+            if (owner->usable_name().empty()) {
                 continue;
             }
 
-            path /= owner->name();
+            path /= owner->usable_name();
         }
 
-        path /= obj->name();
+        path /= obj->usable_name();
 
         return path;
     }
@@ -1335,11 +1332,11 @@ protected:
                     os << "namespace ";
 
                     for (auto&& owner : owners) {
-                        if (owner->name().empty()) {
+                        if (owner->usable_name().empty()) {
                             continue;
                         }
 
-                        os << owner->name();
+                        os << owner->usable_name();
 
                         if (owner != owners.back()) {
                             os << "::";
@@ -1365,11 +1362,11 @@ protected:
             os << "namespace ";
 
             for (auto&& owner : owners) {
-                if (owner->name().empty()) {
+                if (owner->usable_name().empty()) {
                     continue;
                 }
 
-                os << owner->name();
+                os << owner->usable_name();
 
                 if (owner != owners.back()) {
                     os << "::";
