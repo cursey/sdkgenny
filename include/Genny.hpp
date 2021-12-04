@@ -220,19 +220,6 @@ public:
         return add(std::make_unique<T>(name, args...));
     }
 
-protected:
-    friend class Type;
-    friend class Pointer;
-    friend class Function;
-    friend class Namespace;
-    friend class Sdk;
-
-    Object* m_owner{};
-
-    std::string m_name{};
-    std::vector<std::unique_ptr<Object>> m_children{};
-    std::vector<std::string> m_metadata{};
-
     // Will fix up a desired name so that it's usable as a C++ identifier. Things like spaces get converted to
     // underscores, and we make sure it doesn't begin with a number. More checks could be done here in the future if
     // necessary.
@@ -253,6 +240,18 @@ protected:
 
         return name;
     }
+
+protected:
+    friend class Type;
+    friend class Pointer;
+    friend class Namespace;
+    friend class Sdk;
+
+    Object* m_owner{};
+
+    std::string m_name{};
+    std::vector<std::unique_ptr<Object>> m_children{};
+    std::vector<std::string> m_metadata{};
 };
 
 template <typename T> T* cast(const Object* object) {
