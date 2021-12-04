@@ -1418,6 +1418,9 @@ protected:
         }
 
         auto obj_src_path = sdk_path / source_path_for_object(obj);
+        std::ofstream file_list{sdk_path / "file_list.txt", std::ios::app};
+        file_list << "\"" << obj_src_path.string() << "\" \\\n";
+
         std::filesystem::create_directories(obj_src_path.parent_path());
         std::ofstream os{obj_src_path};
 
