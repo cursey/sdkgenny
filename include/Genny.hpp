@@ -796,7 +796,7 @@ public:
             size += sizeof(uintptr_t);
         }
 
-        return std::max(size, m_size);
+        return std::max<size_t>(size, m_size);
     }
     auto size(int size) {
         m_size = size;
@@ -835,7 +835,7 @@ protected:
         }
 
         for (auto&& child : get_all<VirtualFunction>()) {
-            max_index = std::max(max_index, child->vtable_index());
+            max_index = std::max<int>(max_index, child->vtable_index());
         }
 
         return max_index + 1;
@@ -1164,7 +1164,12 @@ public:
         return this;
     }
 
-    void generate(const std::filesystem::path& sdk_path) const { generate_namespace(sdk_path, m_global_ns.get()); }
+    void generate(const std::filesystem::path& sdk_path) const { 
+        // erase the file_list.txt
+        std::filesystem::remove(sdk_path / "file_list.txt");
+
+        generate_namespace(sdk_path, m_global_ns.get()); 
+    }
 
     const auto& header_extension() const { return m_header_extension; }
     auto header_extension(std::string_view ext) {
@@ -1227,6 +1232,8 @@ protected:
 
     template <typename T> void generate_header(const std::filesystem::path& sdk_path, T* obj) const {
         auto obj_inc_path = sdk_path / include_path_for_object(obj);
+        std::ofstream file_list{sdk_path / "file_list.txt", std::ios::app};
+        file_list << "\"" << obj_inc_path.string() << "\" \\\n";
         std::filesystem::create_directories(obj_inc_path.parent_path());
         std::ofstream os{obj_inc_path};
 
@@ -1411,6 +1418,9 @@ protected:
         }
 
         auto obj_src_path = sdk_path / source_path_for_object(obj);
+        std::ofstream file_list{sdk_path / "file_list.txt", std::ios::app};
+        file_list << "\"" << obj_src_path.string() << "\" \\\n";
+
         std::filesystem::create_directories(obj_src_path.parent_path());
         std::ofstream os{obj_src_path};
 
