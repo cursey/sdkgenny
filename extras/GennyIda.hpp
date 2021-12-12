@@ -29,7 +29,7 @@ inline void transform(Sdk& sdk) {
             }
         }
 
-        t->usable_name = [t, new_name] { return new_name; };
+        t->usable_name = [new_name] { return new_name; };
         t->simple_typename_generation(true);
         t->remove_all<Function>();
     }
