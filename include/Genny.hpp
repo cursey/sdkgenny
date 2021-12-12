@@ -178,6 +178,8 @@ public:
         return std::any_of(o.cbegin(), o.cend(), [obj](const auto& owner) { return owner == obj; });
     }
 
+    bool is_direct_child_of(Object* obj) const { return m_owner == obj; }
+
     template <typename T> T* add(std::unique_ptr<T> object) {
         object->m_owner = this;
         return (T*)m_children.emplace_back(std::move(object)).get();
@@ -221,10 +223,22 @@ public:
         return add(std::make_unique<T>(name, args...));
     }
 
+    void remove(Object* obj) { 
+        obj->m_owner = nullptr;
+        m_children.erase(
+            std::remove_if(m_children.begin(), m_children.end(), [obj](auto&& c) { return c.get() == obj; }));
+    }
+
+    template <typename T> void remove_all() { 
+        for (auto&& child : get_all<T>()) {
+            remove(child); 
+        }
+    }
+
     // Will fix up a desired name so that it's usable as a C++ identifier. Things like spaces get converted to
     // underscores, and we make sure it doesn't begin with a number. More checks could be done here in the future if
     // necessary.
-    virtual std::string usable_name() const {
+    std::function<std::string()> usable_name = [this] {
         std::string name{};
 
         for (auto&& c : m_name) {
@@ -232,7 +246,7 @@ public:
                 name += '_';
             } else {
                 name += c;
-            } 
+            }
         }
 
         if (!name.empty() && isdigit(name[0])) {
@@ -240,7 +254,9 @@ public:
         }
 
         return name;
-    }
+    };
+
+    std::function<std::string()> file_name = usable_name;
 
 protected:
     friend class Type;
@@ -268,6 +284,11 @@ public:
     explicit Typename(std::string_view name) : Object{name} {}
 
     virtual void generate_typename_for(std::ostream& os, const Object* obj) const {
+        if (m_simple_typename_generation) {
+            os << usable_name();
+            return;
+        }
+
         if (auto owner_type = owner<Typename>()) {
             if (obj == nullptr || owner_type != obj->owner<Typename>()) {
                 auto&& name = owner_type->name();
@@ -281,6 +302,15 @@ public:
 
         os << usable_name();
     }
+
+    auto simple_typename_generation() const { return m_simple_typename_generation; }
+    auto simple_typename_generation(bool simple_generation) {
+        m_simple_typename_generation = simple_generation;
+        return this;
+    }
+
+protected:
+    bool m_simple_typename_generation{};
 };
 
 class Type : public Typename {
@@ -1239,6 +1269,12 @@ public:
         return this;
     }
 
+    const auto& generate_namespaces() { return m_generate_namespaces; }
+    auto generate_namespaces(bool gen_ns) {
+        m_generate_namespaces = gen_ns;
+        return this;
+    }
+
 protected:
     std::unique_ptr<Namespace> m_global_ns{std::make_unique<Namespace>("")};
     std::string m_preamble{};
@@ -1247,6 +1283,7 @@ protected:
     std::set<std::string> m_local_includes{};
     std::string m_header_extension{".hpp"};
     std::string m_source_extension{".cpp"};
+    bool m_generate_namespaces{true};
 
     std::filesystem::path path_for_object(Object* obj) const {
         std::filesystem::path path{};
@@ -1255,14 +1292,14 @@ protected:
         std::reverse(owners.begin(), owners.end());
 
         for (auto&& owner : owners) {
-            if (owner->usable_name().empty()) {
+            if (owner->file_name().empty()) {
                 continue;
             }
 
-            path /= owner->usable_name();
+            path /= owner->file_name();
         }
 
-        path /= obj->usable_name();
+        path /= obj->file_name();
 
         return path;
     }
@@ -1391,7 +1428,7 @@ protected:
             if (types_to_include.find(type) == types_to_include.end() && !type->is_child_of(obj)) {
                 auto owners = type->owners<Namespace>();
 
-                if (owners.size() > 1) {
+                if (owners.size() > 1 && m_generate_namespaces) {
                     std::reverse(owners.begin(), owners.end());
 
                     os << "namespace ";
@@ -1413,7 +1450,7 @@ protected:
 
                 type->generate_forward_decl(os);
 
-                if (owners.size() > 1) {
+                if (owners.size() > 1 && m_generate_namespaces) {
                     os << "}\n";
                 }
             }
@@ -1421,7 +1458,7 @@ protected:
 
         auto owners = obj->owners<Namespace>();
 
-        if (owners.size() > 1) {
+        if (owners.size() > 1 && m_generate_namespaces) {
             std::reverse(owners.begin(), owners.end());
 
             os << "namespace ";
@@ -1445,7 +1482,7 @@ protected:
         obj->generate(os);
         os << "#pragma pack(pop)\n";
 
-        if (owners.size() > 1) {
+        if (owners.size() > 1 && m_generate_namespaces) {
             os << "}\n";
         }
 
