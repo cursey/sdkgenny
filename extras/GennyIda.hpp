@@ -12,10 +12,8 @@ namespace genny::ida {
 inline void transform(Sdk& sdk) {
     auto g = sdk.global_ns();
     std::unordered_set<Type*> types{};
-    std::unordered_set<Namespace*> namespaces{};
 
     g->get_all_in_children<Type>(types);
-    g->get_all_in_children<Namespace>(namespaces);
 
     for (auto&& t : types) {
         if (!t->is_a<Struct>() && !t->is_a<Enum>()) {
