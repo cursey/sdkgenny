@@ -46,6 +46,10 @@ add_executable(example_badname "examples/BadName.cpp")
 target_compile_features(example_badname PRIVATE cxx_std_17)
 target_include_directories(example_badname PRIVATE "include/")
 
+add_executable(example_constants "examples/Constants.cpp")
+target_compile_features(example_constants PRIVATE cxx_std_17)
+target_include_directories(example_constants PRIVATE "include/")
+
 option(BUILD_PARSER_EXAMPLE "Build the example that uses GennyParser.hpp")
 
 if(BUILD_PARSER_EXAMPLE)
