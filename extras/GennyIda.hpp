@@ -8,10 +8,35 @@
 
 namespace genny::ida {
 // Does a destructive transformation to the Sdk to make it's output parsable by IDA.
-// FIXME: IDA doesn't support enum classes.
 inline void transform(Sdk& sdk) {
     auto g = sdk.global_ns();
     std::unordered_set<Type*> types{};
+    std::unordered_set<EnumClass*> enum_classes{};
+
+    // Make plain enum types for all enum classes.
+    g->get_all_in_children<EnumClass>(enum_classes);
+
+    for (auto& e : enum_classes) {
+        std::unique_ptr<Object> enum_keepalive{};
+        Enum* new_enum{};
+        auto owner = e->direct_owner();
+
+        if (auto ns_owner = dynamic_cast<Namespace*>(owner)) {
+            enum_keepalive = ns_owner->remove(e);
+            new_enum = ns_owner->enum_(e->name());
+        } else if (auto owner_struct = dynamic_cast<Struct*>(owner)) {
+            enum_keepalive = owner_struct->remove(e);
+            new_enum = owner_struct->enum_(e->name());
+        } else {
+            continue;
+        }
+
+        for (auto&& [name, value] : e->values()) {
+            new_enum->value(name, value);
+        }
+
+        new_enum->type(e->type());
+    }
 
     g->get_all_in_children<Type>(types);
 
@@ -20,18 +45,41 @@ inline void transform(Sdk& sdk) {
             continue;
         }
 
-        auto owners = t->owners<Namespace>();
+        auto owners = t->owners<Object>();
         std::string new_name = t->name();
 
-        for (auto&& owner : owners) {
-            if (!owner->name().empty()) {
-                new_name = owner->name() + "::" + new_name;
-            }
-        }
+		for (auto&& owner : owners) {
+			if (!owner->name().empty()) {
+				new_name = owner->name() + "::" + new_name;
+			}
+		}
+
 
         t->usable_name = [new_name] { return new_name; };
+
+        if (!t->direct_owner()->is_a<Struct>()) {
+            t->usable_name_decl = t->usable_name;
+        }
+
         t->simple_typename_generation(true);
         t->remove_all<Function>();
+
+        // Convert all enum classes to normal enums
+        for (auto&& v : t->get_all<Variable>()) {
+            auto v_t = v->type();
+
+            if (!v_t->is_a<EnumClass>()) {
+                continue;
+            }
+
+            auto owner = v_t->direct_owner();
+
+            if (auto owner_ns = dynamic_cast<Namespace*>(owner)) {
+                v->type(owner_ns->enum_(v_t->name()));
+            } else if (auto owner_struct = dynamic_cast<Struct*>(owner)) {
+                v->type(owner_struct->enum_(v_t->name()));
+            }
+        }
     }
 
     sdk.generate_namespaces(false);

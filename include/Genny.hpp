@@ -130,6 +130,8 @@ public:
 
     template <typename T> T* topmost_owner() { return (T*)((const Object*)this)->topmost_owner<T>(); }
 
+    auto direct_owner() const { return m_owner; }
+
     template <typename T> std::vector<T*> owners() const {
         std::vector<T*> owners{};
 
@@ -223,10 +225,20 @@ public:
         return add(std::make_unique<T>(name, args...));
     }
 
-    void remove(Object* obj) { 
+    // Returns the unique_ptr to the removed object.
+    std::unique_ptr<Object> remove(Object* obj) { 
         obj->m_owner = nullptr;
-        m_children.erase(
-            std::remove_if(m_children.begin(), m_children.end(), [obj](auto&& c) { return c.get() == obj; }));
+
+        if (auto search =
+                std::find_if(m_children.begin(), m_children.end(), [obj](auto&& c) { return c.get() == obj; });
+            search != m_children.end()) {
+            auto p = std::move(*search);
+            m_children.erase(search);
+            return p;
+        }
+        /* m_children.erase(
+            std::remove_if(m_children.begin(), m_children.end(), [obj](auto&& c) { return c.get() == obj; }));*/
+        return nullptr;
     }
 
     template <typename T> void remove_all() { 
@@ -256,6 +268,10 @@ public:
         return name;
     };
 
+    // The name used when declaring the object (only for types).
+    std::function<std::string()> usable_name_decl = usable_name;
+
+    // The name used for file generation (only for types).
     std::function<std::string()> file_name = usable_name;
 
 protected:
@@ -778,7 +794,7 @@ public:
     }
 
     virtual void generate(std::ostream& os) const {
-        os << "enum " << usable_name();
+        os << "enum " << usable_name_decl();
         generate_type(os);
         os << " {\n";
         generate_enums(os);
@@ -810,7 +826,7 @@ public:
     explicit EnumClass(std::string_view name) : Enum{name} {}
 
     void generate(std::ostream& os) const override {
-        os << "enum class " << usable_name();
+        os << "enum class " << usable_name_decl();
         generate_type(os);
         os << " {\n";
         generate_enums(os);
@@ -884,11 +900,11 @@ public:
         return this;
     }
 
-    virtual void generate_forward_decl(std::ostream& os) const { os << "struct " << usable_name() << ";\n"; }
+    virtual void generate_forward_decl(std::ostream& os) const { os << "struct " << usable_name_decl() << ";\n"; }
 
     virtual void generate(std::ostream& os) const {
         generate_metadata(os);
-        os << "struct " << usable_name();
+        os << "struct " << usable_name_decl();
         generate_inheritance(os);
         os << " {\n";
         generate_internal(os);
@@ -1200,10 +1216,10 @@ class Class : public Struct {
 public:
     explicit Class(std::string_view name) : Struct{name} {}
 
-    void generate_forward_decl(std::ostream& os) const override { os << "class " << usable_name() << ";\n"; }
+    void generate_forward_decl(std::ostream& os) const override { os << "class " << usable_name_decl() << ";\n"; }
 
     void generate(std::ostream& os) const override {
-        os << "class " << usable_name();
+        os << "class " << usable_name_decl();
         generate_inheritance(os);
         os << " {\n";
         os << "public:\n";
