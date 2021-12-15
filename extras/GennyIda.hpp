@@ -16,16 +16,20 @@ inline void transform(Sdk& sdk) {
     // Make plain enum types for all enum classes.
     g->get_all_in_children<EnumClass>(enum_classes);
 
+    // We have to remove the enum class from it's owner before we can add a normal enum with the same name to it.
+    // Variables may still reference the enum class however so we must keep them alive until all variables have had
+    // their types changed to the normal enum versions.
+    std::vector<std::unique_ptr<Object>> enumclass_keepalive{};
+
     for (auto& e : enum_classes) {
-        std::unique_ptr<Object> enum_keepalive{};
         Enum* new_enum{};
         auto owner = e->direct_owner();
 
         if (auto ns_owner = dynamic_cast<Namespace*>(owner)) {
-            enum_keepalive = ns_owner->remove(e);
+            enumclass_keepalive.emplace_back(ns_owner->remove(e));
             new_enum = ns_owner->enum_(e->name());
         } else if (auto owner_struct = dynamic_cast<Struct*>(owner)) {
-            enum_keepalive = owner_struct->remove(e);
+            enumclass_keepalive.emplace_back(owner_struct->remove(e));
             new_enum = owner_struct->enum_(e->name());
         } else {
             continue;
@@ -48,12 +52,11 @@ inline void transform(Sdk& sdk) {
         auto owners = t->owners<Object>();
         std::string new_name = t->name();
 
-		for (auto&& owner : owners) {
-			if (!owner->name().empty()) {
-				new_name = owner->name() + "::" + new_name;
-			}
-		}
-
+        for (auto&& owner : owners) {
+            if (!owner->name().empty()) {
+                new_name = owner->name() + "::" + new_name;
+            }
+        }
 
         t->usable_name = [new_name] { return new_name; };
 
