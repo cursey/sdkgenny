@@ -219,7 +219,7 @@ public:
     }
 
     // Returns the unique_ptr to the removed object.
-    std::unique_ptr<Object> remove(Object* obj) { 
+    std::unique_ptr<Object> remove(Object* obj) {
         obj->m_owner = nullptr;
 
         if (auto search =
@@ -234,9 +234,9 @@ public:
         return nullptr;
     }
 
-    template <typename T> void remove_all() { 
+    template <typename T> void remove_all() {
         for (auto&& child : get_all<T>()) {
-            remove(child); 
+            remove(child);
         }
     }
 
@@ -545,24 +545,22 @@ public:
     }
 
     const auto& value() const { return m_value; }
-    auto value(std::string_view value) { 
+    auto value(std::string_view value) {
         m_value = std::move(value);
         return this;
     }
 
-    template <typename T, std::enable_if_t<std::is_floating_point_v<T>, bool> = true>
-    auto real(T value) { 
-        m_value = std::to_string(value);
-        return this;    
-    }
-
-    template <typename T, std::enable_if_t<std::is_integral_v<T>, bool> = true>
-    auto integer(T value) {
+    template <typename T, std::enable_if_t<std::is_floating_point_v<T>, bool> = true> auto real(T value) {
         m_value = std::to_string(value);
         return this;
     }
 
-    auto string(const std::string& value) { 
+    template <typename T, std::enable_if_t<std::is_integral_v<T>, bool> = true> auto integer(T value) {
+        m_value = std::to_string(value);
+        return this;
+    }
+
+    auto string(const std::string& value) {
         m_value = "\"" + value + "\"";
         return this;
     }
@@ -1006,7 +1004,7 @@ protected:
         }
 
         // Fill out the remaining space in the bitfield if necessary.
-         auto num_bits = bitfield_type->size() * CHAR_BIT;
+        auto num_bits = bitfield_type->size() * CHAR_BIT;
 
         if (last_bit != num_bits) {
             auto bit_offset = num_bits;
@@ -1259,11 +1257,11 @@ public:
         return this;
     }
 
-    void generate(const std::filesystem::path& sdk_path) const { 
+    void generate(const std::filesystem::path& sdk_path) const {
         // erase the file_list.txt
         std::filesystem::remove(sdk_path / "file_list.txt");
 
-        generate_namespace(sdk_path, m_global_ns.get()); 
+        generate_namespace(sdk_path, m_global_ns.get());
     }
 
     const auto& header_extension() const { return m_header_extension; }
@@ -1623,4 +1621,4 @@ protected:
         }
     }
 };
-}
+} // namespace genny

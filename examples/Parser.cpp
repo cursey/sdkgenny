@@ -1,5 +1,5 @@
-#include <iostream>
 #include <cstdlib>
+#include <iostream>
 #include <optional>
 
 #include <GennyParser.hpp>
@@ -215,15 +215,15 @@ int main(int argc, char* argv[]) {
     sdk.source_extension(".cxx");
 
     genny::parser::State s{};
-    //s.global_ns = s.cur_ns = sdk.global_ns();
+    // s.global_ns = s.cur_ns = sdk.global_ns();
     s.parents.push_back(sdk.global_ns());
 
-    //pegtl::string_input in{"float type 4", "example_string"};
-    //pegtl::string_input in{g_example_str, "example_string"};
+    // pegtl::string_input in{"float type 4", "example_string"};
+    // pegtl::string_input in{g_example_str, "example_string"};
     pegtl::string_input in{g_usage_str, "usage_str"};
-    //pegtl::string_input in{g_ns_bug, "ns_bug_str"};
-    //pegtl::string_input in{g_new, "new_str"};
-    //pegtl::string_input in{g_include, "include_str"};
+    // pegtl::string_input in{g_ns_bug, "ns_bug_str"};
+    // pegtl::string_input in{g_new, "new_str"};
+    // pegtl::string_input in{g_include, "include_str"};
 
     try {
         auto r = pegtl::parse<genny::parser::Grammar, genny::parser::Action>(in, s);

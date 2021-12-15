@@ -2,7 +2,7 @@
 
 int main(int argc, char* argv[]) {
     genny::Sdk sdk{};
-    
+
     auto g = sdk.global_ns();
     auto bad_type = g->type("Bad name type")->size(8);
     auto bad_class = g->class_("Bad class");

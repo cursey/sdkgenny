@@ -32,6 +32,6 @@ int main() {
     c->function("SomeFunc")->returns(dummy_type);
 
     sdk.generate("sdk");
-    
+
     return 1;
 }
