@@ -2,7 +2,7 @@
 #include <cstdlib>
 #include <optional>
 
-#include <Genny.hpp>
+#include <GennyParser.hpp>
 
 constexpr auto g_example_str = R"(
 type float 4
