@@ -67,10 +67,13 @@ struct StructParentList : list<StructParent, one<','>, Sep> {};
 struct StructParentListDecl : seq<one<':'>, Seps, StructParentList> {};
 struct StructSize : Num {};
 struct StructDecl : if_must<StructId, Seps, StructName, Seps, opt<StructParentListDecl>, Seps, opt<StructSize>> {};
+struct StructPrivacyDecl
+    : disable<sor<TAO_PEGTL_STRING("public"), TAO_PEGTL_STRING("private"), TAO_PEGTL_STRING("protected")>, Seps,
+          one<':'>> {};
 struct StructExpr;
 struct FnDecl;
 struct VarDecl;
-struct StructExprs : list<sor<EnumExpr, StructExpr, FnDecl, VarDecl>, Seps> {};
+struct StructExprs : list<sor<StructPrivacyDecl, FnDecl, VarDecl, EnumExpr, StructExpr>, Seps> {};
 struct StructExpr : if_must<StructDecl, Seps, one<'{'>, Seps, opt<StructExprs>, Seps, one<'}'>, Endl> {};
 
 struct VarTypeNamePart : identifier {};
@@ -78,7 +81,9 @@ struct VarTypeName : list_must<VarTypeNamePart, one<'.'>> {};
 struct VarTypePtr : one<'*'> {};
 struct VarTypeArrayCount : Num {};
 struct VarTypeArray : if_must<one<'['>, VarTypeArrayCount, one<']'>> {};
-struct VarType : seq<VarTypeName, star<VarTypePtr>, star<VarTypeArray>> {};
+struct VarTypeHint : sor<TAO_PEGTL_STRING("struct"), TAO_PEGTL_STRING("class"), TAO_PEGTL_STRING("enum class"),
+                         TAO_PEGTL_STRING("enum")> {};
+struct VarType : seq<opt<VarTypeHint>, Seps, VarTypeName, Seps, star<VarTypePtr>, star<VarTypeArray>> {};
 struct VarName : identifier {};
 struct VarOffset : Num {};
 struct VarOffsetDecl : if_must<one<'@'>, Seps, VarOffset> {};
@@ -104,7 +109,9 @@ struct FnVirtualId : TAO_PEGTL_STRING("virtual") {};
 struct FnPrefix : sor<FnStaticId, FnVirtualId> {};
 struct FnDecl : seq<opt<FnPrefix>, Seps, FnRet, Seps, FnName, Seps, FnParams, Endl> {};
 
-struct Decl : sor<IncludeDecl, TypeDecl, NsExpr, EnumExpr, StructExpr> {};
+struct StaticAssert : disable<TAO_PEGTL_STRING("static_assert"), until<one<';'>>> {};
+
+struct Decl : sor<IncludeDecl, TypeDecl, NsExpr, EnumExpr, StructExpr, StaticAssert> {};
 struct Grammar : until<eof, sor<eolf, Sep, Decl>> {};
 
 struct State {
@@ -137,6 +144,7 @@ struct State {
     bool struct_is_class{};
 
     genny::Type* cur_type{};
+    std::string var_type_hint{};
     std::vector<std::string> var_type{};
     std::optional<size_t> var_type_array_count{};
     std::vector<size_t> var_type_array_counts{};
@@ -162,7 +170,9 @@ struct State {
     // Searches for the type identified by a vector of names.
     template <typename T> T* lookup(const std::vector<std::string>& names) {
         std::function<T*(Object*, int)> search = [&](Object* parent, int i) -> T* {
-            if (names.empty() || i >= names.size()) {
+            if (names.empty()) {
+                return dynamic_cast<T*>(parents.front());
+            } else if (i >= names.size()) {
                 return nullptr;
             }
 
@@ -449,6 +459,12 @@ template <> struct Action<StructExpr> {
     template <typename ActionInput> static void apply(const ActionInput& in, State& s) { s.parents.pop_back(); }
 };
 
+template <> struct Action<VarTypeHint> {
+    template <typename ActionInput> static void apply(const ActionInput& in, State& s) {
+        s.var_type_hint = in.string_view();
+    }
+};
+
 template <> struct Action<VarTypeNamePart> {
     template <typename ActionInput> static void apply(const ActionInput& in, State& s) {
         s.var_type.emplace_back(in.string_view());
@@ -458,6 +474,24 @@ template <> struct Action<VarTypeNamePart> {
 template <> struct Action<VarTypeName> {
     template <typename ActionInput> static void apply(const ActionInput& in, State& s) {
         s.cur_type = s.lookup<Type>(s.var_type);
+
+        if (s.cur_type == nullptr && !s.var_type_hint.empty()) {
+            auto owner_type = s.var_type;
+            owner_type.pop_back();
+            auto owner = s.lookup<Namespace>(owner_type);
+
+            if (owner != nullptr) {
+                if (s.var_type_hint == "struct") {
+                    s.cur_type = owner->struct_(s.var_type.back());
+                } else if (s.var_type_hint == "class") {
+                    s.cur_type = owner->class_(s.var_type.back());
+                } else if (s.var_type_hint == "enum") {
+                    s.cur_type = owner->enum_(s.var_type.back());
+                } else if (s.var_type_hint == "enum class") {
+                    s.cur_type = owner->enum_class(s.var_type.back());
+                }
+            }
+        }
 
         if (s.cur_type == nullptr) {
             throw parse_error{"Can't find type with name '" + s.var_type.back() + "'", in};
@@ -567,6 +601,7 @@ template <> struct Action<VarDecl> {
             s.var_delta = std::nullopt;
             s.var_bit_size = std::nullopt;
             s.var_bit_offset = std::nullopt;
+            s.var_type_hint.clear();
         } else {
             throw parse_error{"Can't declare a variable outside of a struct", in};
         }

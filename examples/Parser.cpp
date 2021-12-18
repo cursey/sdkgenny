@@ -206,6 +206,52 @@ struct Baz : foobar.Bar {
 }
 )";
 
+constexpr auto g_fwd_decl_members = R"(
+class Foo {
+    struct Bar* bar
+}
+
+struct Bar {
+    class Foo* foo
+    enum class Baz* baz
+}
+
+enum class Baz {
+    A = 0, 
+    B = 1, 
+    C = 2
+}
+)";
+
+constexpr auto g_reclass = R"(
+type char 1
+
+// Created with ReClass.NET 1.2 by KN4CK3R
+
+class Foo
+{
+public:
+	char pad_0000[128]; //0x0000
+}; //Size: 0x0080
+static_assert(sizeof(Foo) == 0x80);
+
+class Bar
+{
+public:
+	char pad_0000[128]; //0x0000
+}; //Size: 0x0080
+static_assert(sizeof(Bar) == 0x80);
+
+class Baz
+{
+public:
+	class Foo *foo; //0x0000
+	class Bar *bar; //0x0008
+	char pad_0010[112]; //0x0010
+}; //Size: 0x0080
+static_assert(sizeof(Baz) == 0x80);
+)";
+
 namespace pegtl = tao::pegtl;
 
 int main(int argc, char* argv[]) {
@@ -224,6 +270,8 @@ int main(int argc, char* argv[]) {
     // pegtl::string_input in{g_ns_bug, "ns_bug_str"};
     // pegtl::string_input in{g_new, "new_str"};
     // pegtl::string_input in{g_include, "include_str"};
+    // pegtl::string_input in{g_fwd_decl_members, "fwd_decl_members"};
+    // pegtl::string_input in{g_reclass, "reclass"};
 
     try {
         auto r = pegtl::parse<genny::parser::Grammar, genny::parser::Action>(in, s);
