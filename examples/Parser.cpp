@@ -250,6 +250,13 @@ public:
 	char pad_0010[112]; //0x0010
 }; //Size: 0x0080
 static_assert(sizeof(Baz) == 0x80);
+
+class Qux : public Baz
+{
+public:
+	char pad_0080[120]; //0x0080
+}; //Size: 0x00F8
+static_assert(sizeof(Qux) == 0xF8);
 )";
 
 namespace pegtl = tao::pegtl;
