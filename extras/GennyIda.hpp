@@ -7,8 +7,10 @@
 #include "Genny.hpp"
 
 namespace genny::ida {
+inline auto default_usable_name = [](const std::string& s) { return s; };
+
 // Does a destructive transformation to the Sdk to make it's output parsable by IDA.
-inline void transform(Sdk& sdk) {
+inline void transform(Sdk& sdk, std::function<std::string(const std::string&)> usable_name = default_usable_name) {
     auto g = sdk.global_ns();
     std::unordered_set<Type*> types{};
     std::unordered_set<EnumClass*> enum_classes{};
@@ -57,6 +59,8 @@ inline void transform(Sdk& sdk) {
                 new_name = owner->name() + "::" + new_name;
             }
         }
+
+        new_name = usable_name(new_name);
 
         t->usable_name = [new_name] { return new_name; };
 
