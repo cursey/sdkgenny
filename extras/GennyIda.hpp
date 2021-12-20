@@ -50,11 +50,11 @@ inline void transform(Sdk& sdk) {
         }
 
         auto owners = t->owners<Object>();
-        std::string new_name = t->usable_name();
+        std::string new_name = t->name();
 
         for (auto&& owner : owners) {
-            if (!owner->usable_name().empty()) {
-                new_name = owner->usable_name() + "::" + new_name;
+            if (!owner->name().empty()) {
+                new_name = owner->name() + "::" + new_name;
             }
         }
 
