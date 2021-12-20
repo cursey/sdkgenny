@@ -80,9 +80,9 @@ struct VarTypeName : list_must<VarTypeNamePart, one<'.'>> {};
 struct VarTypePtr : one<'*'> {};
 struct VarTypeArrayCount : Num {};
 struct VarTypeArray : if_must<one<'['>, VarTypeArrayCount, one<']'>> {};
-struct VarTypeHint : sor<TAO_PEGTL_STRING("struct"), TAO_PEGTL_STRING("class"), TAO_PEGTL_STRING("enum class"),
+struct VarTypeHintId : sor<TAO_PEGTL_STRING("struct"), TAO_PEGTL_STRING("class"), TAO_PEGTL_STRING("enum class"),
                          TAO_PEGTL_STRING("enum")> {};
-struct VarType : seq<opt<VarTypeHint>, Seps, VarTypeName, Seps, star<VarTypePtr>, star<VarTypeArray>> {};
+struct VarType : seq<opt<VarTypeHintId>, Seps, VarTypeName, Seps, star<VarTypePtr>, star<VarTypeArray>> {};
 struct VarName : identifier {};
 struct VarOffset : Num {};
 struct VarOffsetDecl : if_must<one<'@'>, Seps, VarOffset> {};
@@ -458,7 +458,7 @@ template <> struct Action<StructExpr> {
     template <typename ActionInput> static void apply(const ActionInput& in, State& s) { s.parents.pop_back(); }
 };
 
-template <> struct Action<VarTypeHint> {
+template <> struct Action<VarTypeHintId> {
     template <typename ActionInput> static void apply(const ActionInput& in, State& s) {
         s.var_type_hint = in.string_view();
     }
