@@ -7,12 +7,9 @@
 #include "Genny.hpp"
 
 namespace genny::ida {
-inline auto default_usable_name = [](const std::string& s) { return s; };
-
 // Does a destructive transformation to the Sdk to make it's output parsable by IDA.
-inline void transform(Sdk& sdk, std::function<std::string(const std::string&)> usable_name = default_usable_name) {
+inline void transform(Sdk& sdk) {
     auto g = sdk.global_ns();
-    std::unordered_set<Type*> types{};
     std::unordered_set<EnumClass*> enum_classes{};
 
     // Make plain enum types for all enum classes.
@@ -44,29 +41,28 @@ inline void transform(Sdk& sdk, std::function<std::string(const std::string&)> u
         new_enum->type(e->type());
     }
 
+    std::unordered_set<Type*> types{};
+    std::unordered_map<Type*, std::string> new_names{};
+
     g->get_all_in_children<Type>(types);
 
+    // Go through all the types making new names for them (but not setting them yet) and removing things like their
+    // functions/constants and fixing their enum class types etc.
     for (auto&& t : types) {
         if (!t->is_a<Struct>() && !t->is_a<Enum>()) {
             continue;
         }
 
         auto owners = t->owners<Object>();
-        std::string new_name = t->name();
+        auto new_name = t->usable_name();
 
         for (auto&& owner : owners) {
-            if (!owner->name().empty()) {
-                new_name = owner->name() + "::" + new_name;
+            if (!owner->usable_name().empty()) {
+                new_name = owner->usable_name() + "::" + new_name;
             }
         }
 
-        new_name = usable_name(new_name);
-
-        t->usable_name = [new_name] { return new_name; };
-
-        if (!t->direct_owner()->is_a<Struct>()) {
-            t->usable_name_decl = t->usable_name;
-        }
+        new_names.emplace(t, std::move(new_name));
 
         t->simple_typename_generation(true);
         t->remove_all<Function>();
@@ -87,6 +83,15 @@ inline void transform(Sdk& sdk, std::function<std::string(const std::string&)> u
             } else if (auto owner_struct = dynamic_cast<Struct*>(owner)) {
                 v->type(owner_struct->enum_(v_t->name()));
             }
+        }
+    }
+
+    // Now that all the new names have been built we can set them.
+    for (auto&& [t, name] : new_names) {
+        t->usable_name = [new_name = std::move(name)] { return new_name; };
+
+        if (!t->direct_owner()->is_a<Struct>()) {
+            t->usable_name_decl = t->usable_name;
         }
     }
 
