@@ -1,4 +1,5 @@
 #include <Genny.hpp>
+#include <GennyIda.hpp>
 
 void car(genny::Namespace* g) {
     g->type("bool")->size(1);
@@ -6,7 +7,7 @@ void car(genny::Namespace* g) {
     g->type("short")->size(2);
     g->type("int")->size(4);
     g->type("long")->size(4);
-    g->type("long long")->size(8);
+    g->type("int64_t")->size(8);
     g->type("float")->size(4);
     g->type("double")->size(8);
 
@@ -45,7 +46,7 @@ void car(genny::Namespace* g) {
 
     open_door->param("where")->type(g->type("Vec3")->ptr());
 
-    car->enum_class("Title")->value("SALVAGE", 0)->value("CLEAN", 1)->type(g->type("long long"));
+    car->enum_class("Title")->value("SALVAGE", 0)->value("CLEAN", 1)->type(g->type("int64_t"));
 
     auto two_door = g->class_("TwoDoorCar")->parent(g->class_("Car"));
 
@@ -98,14 +99,14 @@ int main(int argc, char* argv[]) {
     genny::Sdk sdk{};
     auto g = sdk.global_ns();
 
-    sdk.include("cstdint")->include("vector");
+    // sdk.include("cstdint")->include("vector");
 
     g->type("bool")->size(1);
     g->type("char")->size(1);
     g->type("short")->size(2);
     g->type("int")->size(4);
     g->type("long")->size(4);
-    g->type("long long")->size(8);
+    g->type("int64_t")->size(8);
     g->type("float")->size(4);
     g->type("double")->size(8);
 
@@ -113,7 +114,7 @@ int main(int argc, char* argv[]) {
     auto a = g->namespace_("a");
     auto AEnum = a->enum_("AEnum")->value("A", 1)->value("B", 2)->value("C", 3);
     auto b = g->namespace_("b");
-    auto ba = b->namespace_("ba"); 
+    auto ba = b->namespace_("ba");
     auto BAClass = ba->class_("BAClass");
     BAClass->variable("a_enum")->offset(8)->type(AEnum->ptr());
     auto c = g->namespace_("c");
@@ -144,8 +145,11 @@ int main(int argc, char* argv[]) {
     auto nested = CClass->class_("Nested");
     nested->function("aloha")->procedure("std::cout << \"aloha\\n\";");
 
+    g->class_("EmptyClass");
+
     auto sdk_path = std::filesystem::current_path() / "example_sdk";
     std::filesystem::remove_all(sdk_path);
+    //genny::ida::transform(sdk);
     sdk.generate(sdk_path);
 
     return 0;

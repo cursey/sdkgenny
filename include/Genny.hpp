@@ -1213,8 +1213,12 @@ public:
         os << "class " << usable_name_decl();
         generate_inheritance(os);
         os << " {\n";
-        os << "public:\n";
-        generate_internal(os);
+
+        if (!m_children.empty()) {
+            os << "public:\n";
+            generate_internal(os);
+        }
+
         os << "}; // Size: 0x" << std::hex << size() << "\n";
     }
 };
