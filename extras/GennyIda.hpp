@@ -66,6 +66,7 @@ inline void transform(Sdk& sdk) {
 
         t->simple_typename_generation(true);
         t->remove_all<Function>();
+        t->remove_all<Constant>();
 
         // Convert all enum classes to normal enums
         for (auto&& v : t->get_all<Variable>()) {
