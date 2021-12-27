@@ -1,0 +1,105 @@
+# Reference: https://build-cpp.github.io/cmkr/cmake-toml
+[project]
+name = "sdkgenny"
+
+[vcpkg]
+version = "2021.12.01"
+packages = ["pegtl"]
+
+[find-package]
+pegtl = {}
+
+[target.sdkgenny]
+type = "interface"
+include-directories = ["include/"]
+compile-features = ["cxx_std_17"]
+
+[target.example_car]
+type = "executable"
+sources = ["examples/Car.cpp"]
+link-libraries = ["sdkgenny"]
+
+[[test]]
+name = "car"
+command = "$<TARGET_FILE:example_car>"
+working-directory = "${CMAKE_BINARY_DIR}"
+
+[target.example_bitfield]
+type = "executable"
+sources = ["examples/Bitfield.cpp"]
+link-libraries = ["sdkgenny"]
+
+[[test]]
+name = "bitfield"
+command = "$<TARGET_FILE:example_bitfield>"
+working-directory = "${CMAKE_BINARY_DIR}"
+
+[target.example_typename]
+type = "executable"
+sources = ["examples/Typename.cpp"]
+link-libraries = ["sdkgenny"]
+
+[[test]]
+name = "typename"
+command = "$<TARGET_FILE:example_typename>"
+working-directory = "${CMAKE_BINARY_DIR}"
+
+[target.example_usage]
+type = "executable"
+sources = ["examples/Usage.cpp"]
+link-libraries = ["sdkgenny"]
+
+[[test]]
+name = "usage"
+command = "$<TARGET_FILE:example_usage>"
+working-directory = "${CMAKE_BINARY_DIR}"
+
+[target.example_sdk]
+type = "executable"
+sources = ["examples/Sdk.cpp"]
+link-libraries = ["sdkgenny"]
+
+[[test]]
+name = "sdk"
+command = "$<TARGET_FILE:example_sdk>"
+working-directory = "${CMAKE_BINARY_DIR}"
+
+[target.example_dummydata]
+type = "executable"
+sources = ["examples/DummyData.cpp"]
+link-libraries = ["sdkgenny"]
+
+[[test]]
+name = "dummydata"
+command = "$<TARGET_FILE:example_dummydata>"
+working-directory = "${CMAKE_BINARY_DIR}"
+
+[target.example_badname]
+type = "executable"
+sources = ["examples/BadName.cpp"]
+link-libraries = ["sdkgenny"]
+
+[[test]]
+name = "badname"
+command = "$<TARGET_FILE:example_badname>"
+working-directory = "${CMAKE_BINARY_DIR}"
+
+[target.example_constants]
+type = "executable"
+sources = ["examples/Constants.cpp"]
+link-libraries = ["sdkgenny"]
+
+[[test]]
+name = "constants"
+command = "$<TARGET_FILE:example_constants>"
+working-directory = "${CMAKE_BINARY_DIR}"
+
+[target.example_parser]
+type = "executable"
+sources = ["examples/Parser.cpp"]
+link-libraries = ["sdkgenny", "taocpp::pegtl"]
+
+[[test]]
+name = "parser"
+command = "$<TARGET_FILE:example_parser>"
+working-directory = "${CMAKE_BINARY_DIR}"

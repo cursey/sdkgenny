@@ -1,5 +1,4 @@
 #include <Genny.hpp>
-#include <GennyIda.hpp>
 
 void car(genny::Namespace* g) {
     g->type("bool")->size(1);
@@ -149,7 +148,6 @@ int main(int argc, char* argv[]) {
 
     auto sdk_path = std::filesystem::current_path() / "example_sdk";
     std::filesystem::remove_all(sdk_path);
-    //genny::ida::transform(sdk);
     sdk.generate(sdk_path);
 
     return 0;

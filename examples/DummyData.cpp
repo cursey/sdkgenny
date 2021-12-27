@@ -33,5 +33,5 @@ int main() {
 
     sdk.generate("sdk");
 
-    return 1;
+    return 0;
 }
