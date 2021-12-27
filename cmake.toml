@@ -13,6 +13,7 @@ pegtl = {}
 type = "interface"
 include-directories = ["include/"]
 compile-features = ["cxx_std_17"]
+alias = "sdkgenny::sdkgenny"
 
 [target.example_car]
 type = "executable"

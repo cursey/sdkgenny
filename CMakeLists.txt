@@ -51,6 +51,7 @@ if(sdkgenny_SOURCES)
 	target_sources(sdkgenny INTERFACE ${sdkgenny_SOURCES})
 endif()
 
+add_library(sdkgenny::sdkgenny ALIAS sdkgenny)
 target_compile_features(sdkgenny INTERFACE
 	cxx_std_17
 )
