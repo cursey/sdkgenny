@@ -27,6 +27,9 @@ if(CMKR_ROOT_PROJECT)
 	configure_file(cmake.toml cmake.toml COPYONLY)
 endif()
 
+# Options
+option(SDKGENNY_BUILD_EXAMPLES OFF)
+
 project(sdkgenny)
 
 if(CMKR_ROOT_PROJECT AND NOT CMKR_DISABLE_VCPKG)
@@ -64,383 +67,318 @@ unset(CMKR_TARGET)
 unset(CMKR_SOURCES)
 
 # Target example_car
-set(CMKR_TARGET example_car)
-set(example_car_SOURCES "")
+if(SDKGENNY_BUILD_EXAMPLES) # build-examples
+	set(CMKR_TARGET example_car)
+	set(example_car_SOURCES "")
 
-list(APPEND example_car_SOURCES
-	"examples/Car.cpp"
-)
+	list(APPEND example_car_SOURCES
+		"examples/Car.cpp"
+	)
 
-list(APPEND example_car_SOURCES
-	cmake.toml
-)
+	list(APPEND example_car_SOURCES
+		cmake.toml
+	)
 
-set(CMKR_SOURCES ${example_car_SOURCES})
-add_executable(example_car)
+	set(CMKR_SOURCES ${example_car_SOURCES})
+	add_executable(example_car)
 
-if(example_car_SOURCES)
-	target_sources(example_car PRIVATE ${example_car_SOURCES})
+	if(example_car_SOURCES)
+		target_sources(example_car PRIVATE ${example_car_SOURCES})
+	endif()
+
+	get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
+	if(NOT CMKR_VS_STARTUP_PROJECT)
+		set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT example_car)
+	endif()
+
+	source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${example_car_SOURCES})
+
+	target_link_libraries(example_car PRIVATE
+		sdkgenny
+	)
+
+	unset(CMKR_TARGET)
+	unset(CMKR_SOURCES)
 endif()
-
-get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
-if(NOT CMKR_VS_STARTUP_PROJECT)
-	set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT example_car)
-endif()
-
-source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${example_car_SOURCES})
-
-target_link_libraries(example_car PRIVATE
-	sdkgenny
-)
-
-unset(CMKR_TARGET)
-unset(CMKR_SOURCES)
 
 # Target example_bitfield
-set(CMKR_TARGET example_bitfield)
-set(example_bitfield_SOURCES "")
+if(SDKGENNY_BUILD_EXAMPLES) # build-examples
+	set(CMKR_TARGET example_bitfield)
+	set(example_bitfield_SOURCES "")
 
-list(APPEND example_bitfield_SOURCES
-	"examples/Bitfield.cpp"
-)
+	list(APPEND example_bitfield_SOURCES
+		"examples/Bitfield.cpp"
+	)
 
-list(APPEND example_bitfield_SOURCES
-	cmake.toml
-)
+	list(APPEND example_bitfield_SOURCES
+		cmake.toml
+	)
 
-set(CMKR_SOURCES ${example_bitfield_SOURCES})
-add_executable(example_bitfield)
+	set(CMKR_SOURCES ${example_bitfield_SOURCES})
+	add_executable(example_bitfield)
 
-if(example_bitfield_SOURCES)
-	target_sources(example_bitfield PRIVATE ${example_bitfield_SOURCES})
+	if(example_bitfield_SOURCES)
+		target_sources(example_bitfield PRIVATE ${example_bitfield_SOURCES})
+	endif()
+
+	get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
+	if(NOT CMKR_VS_STARTUP_PROJECT)
+		set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT example_bitfield)
+	endif()
+
+	source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${example_bitfield_SOURCES})
+
+	target_link_libraries(example_bitfield PRIVATE
+		sdkgenny
+	)
+
+	unset(CMKR_TARGET)
+	unset(CMKR_SOURCES)
 endif()
-
-get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
-if(NOT CMKR_VS_STARTUP_PROJECT)
-	set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT example_bitfield)
-endif()
-
-source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${example_bitfield_SOURCES})
-
-target_link_libraries(example_bitfield PRIVATE
-	sdkgenny
-)
-
-unset(CMKR_TARGET)
-unset(CMKR_SOURCES)
 
 # Target example_typename
-set(CMKR_TARGET example_typename)
-set(example_typename_SOURCES "")
+if(SDKGENNY_BUILD_EXAMPLES) # build-examples
+	set(CMKR_TARGET example_typename)
+	set(example_typename_SOURCES "")
 
-list(APPEND example_typename_SOURCES
-	"examples/Typename.cpp"
-)
+	list(APPEND example_typename_SOURCES
+		"examples/Typename.cpp"
+	)
 
-list(APPEND example_typename_SOURCES
-	cmake.toml
-)
+	list(APPEND example_typename_SOURCES
+		cmake.toml
+	)
 
-set(CMKR_SOURCES ${example_typename_SOURCES})
-add_executable(example_typename)
+	set(CMKR_SOURCES ${example_typename_SOURCES})
+	add_executable(example_typename)
 
-if(example_typename_SOURCES)
-	target_sources(example_typename PRIVATE ${example_typename_SOURCES})
+	if(example_typename_SOURCES)
+		target_sources(example_typename PRIVATE ${example_typename_SOURCES})
+	endif()
+
+	get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
+	if(NOT CMKR_VS_STARTUP_PROJECT)
+		set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT example_typename)
+	endif()
+
+	source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${example_typename_SOURCES})
+
+	target_link_libraries(example_typename PRIVATE
+		sdkgenny
+	)
+
+	unset(CMKR_TARGET)
+	unset(CMKR_SOURCES)
 endif()
-
-get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
-if(NOT CMKR_VS_STARTUP_PROJECT)
-	set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT example_typename)
-endif()
-
-source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${example_typename_SOURCES})
-
-target_link_libraries(example_typename PRIVATE
-	sdkgenny
-)
-
-unset(CMKR_TARGET)
-unset(CMKR_SOURCES)
 
 # Target example_usage
-set(CMKR_TARGET example_usage)
-set(example_usage_SOURCES "")
+if(SDKGENNY_BUILD_EXAMPLES) # build-examples
+	set(CMKR_TARGET example_usage)
+	set(example_usage_SOURCES "")
 
-list(APPEND example_usage_SOURCES
-	"examples/Usage.cpp"
-)
+	list(APPEND example_usage_SOURCES
+		"examples/Usage.cpp"
+	)
 
-list(APPEND example_usage_SOURCES
-	cmake.toml
-)
+	list(APPEND example_usage_SOURCES
+		cmake.toml
+	)
 
-set(CMKR_SOURCES ${example_usage_SOURCES})
-add_executable(example_usage)
+	set(CMKR_SOURCES ${example_usage_SOURCES})
+	add_executable(example_usage)
 
-if(example_usage_SOURCES)
-	target_sources(example_usage PRIVATE ${example_usage_SOURCES})
+	if(example_usage_SOURCES)
+		target_sources(example_usage PRIVATE ${example_usage_SOURCES})
+	endif()
+
+	get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
+	if(NOT CMKR_VS_STARTUP_PROJECT)
+		set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT example_usage)
+	endif()
+
+	source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${example_usage_SOURCES})
+
+	target_link_libraries(example_usage PRIVATE
+		sdkgenny
+	)
+
+	unset(CMKR_TARGET)
+	unset(CMKR_SOURCES)
 endif()
-
-get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
-if(NOT CMKR_VS_STARTUP_PROJECT)
-	set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT example_usage)
-endif()
-
-source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${example_usage_SOURCES})
-
-target_link_libraries(example_usage PRIVATE
-	sdkgenny
-)
-
-unset(CMKR_TARGET)
-unset(CMKR_SOURCES)
 
 # Target example_sdk
-set(CMKR_TARGET example_sdk)
-set(example_sdk_SOURCES "")
+if(SDKGENNY_BUILD_EXAMPLES) # build-examples
+	set(CMKR_TARGET example_sdk)
+	set(example_sdk_SOURCES "")
 
-list(APPEND example_sdk_SOURCES
-	"examples/Sdk.cpp"
-)
+	list(APPEND example_sdk_SOURCES
+		"examples/Sdk.cpp"
+	)
 
-list(APPEND example_sdk_SOURCES
-	cmake.toml
-)
+	list(APPEND example_sdk_SOURCES
+		cmake.toml
+	)
 
-set(CMKR_SOURCES ${example_sdk_SOURCES})
-add_executable(example_sdk)
+	set(CMKR_SOURCES ${example_sdk_SOURCES})
+	add_executable(example_sdk)
 
-if(example_sdk_SOURCES)
-	target_sources(example_sdk PRIVATE ${example_sdk_SOURCES})
+	if(example_sdk_SOURCES)
+		target_sources(example_sdk PRIVATE ${example_sdk_SOURCES})
+	endif()
+
+	get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
+	if(NOT CMKR_VS_STARTUP_PROJECT)
+		set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT example_sdk)
+	endif()
+
+	source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${example_sdk_SOURCES})
+
+	target_link_libraries(example_sdk PRIVATE
+		sdkgenny
+	)
+
+	unset(CMKR_TARGET)
+	unset(CMKR_SOURCES)
 endif()
-
-get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
-if(NOT CMKR_VS_STARTUP_PROJECT)
-	set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT example_sdk)
-endif()
-
-source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${example_sdk_SOURCES})
-
-target_link_libraries(example_sdk PRIVATE
-	sdkgenny
-)
-
-unset(CMKR_TARGET)
-unset(CMKR_SOURCES)
 
 # Target example_dummydata
-set(CMKR_TARGET example_dummydata)
-set(example_dummydata_SOURCES "")
+if(SDKGENNY_BUILD_EXAMPLES) # build-examples
+	set(CMKR_TARGET example_dummydata)
+	set(example_dummydata_SOURCES "")
 
-list(APPEND example_dummydata_SOURCES
-	"examples/DummyData.cpp"
-)
+	list(APPEND example_dummydata_SOURCES
+		"examples/DummyData.cpp"
+	)
 
-list(APPEND example_dummydata_SOURCES
-	cmake.toml
-)
+	list(APPEND example_dummydata_SOURCES
+		cmake.toml
+	)
 
-set(CMKR_SOURCES ${example_dummydata_SOURCES})
-add_executable(example_dummydata)
+	set(CMKR_SOURCES ${example_dummydata_SOURCES})
+	add_executable(example_dummydata)
 
-if(example_dummydata_SOURCES)
-	target_sources(example_dummydata PRIVATE ${example_dummydata_SOURCES})
+	if(example_dummydata_SOURCES)
+		target_sources(example_dummydata PRIVATE ${example_dummydata_SOURCES})
+	endif()
+
+	get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
+	if(NOT CMKR_VS_STARTUP_PROJECT)
+		set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT example_dummydata)
+	endif()
+
+	source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${example_dummydata_SOURCES})
+
+	target_link_libraries(example_dummydata PRIVATE
+		sdkgenny
+	)
+
+	unset(CMKR_TARGET)
+	unset(CMKR_SOURCES)
 endif()
-
-get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
-if(NOT CMKR_VS_STARTUP_PROJECT)
-	set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT example_dummydata)
-endif()
-
-source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${example_dummydata_SOURCES})
-
-target_link_libraries(example_dummydata PRIVATE
-	sdkgenny
-)
-
-unset(CMKR_TARGET)
-unset(CMKR_SOURCES)
 
 # Target example_badname
-set(CMKR_TARGET example_badname)
-set(example_badname_SOURCES "")
+if(SDKGENNY_BUILD_EXAMPLES) # build-examples
+	set(CMKR_TARGET example_badname)
+	set(example_badname_SOURCES "")
 
-list(APPEND example_badname_SOURCES
-	"examples/BadName.cpp"
-)
+	list(APPEND example_badname_SOURCES
+		"examples/BadName.cpp"
+	)
 
-list(APPEND example_badname_SOURCES
-	cmake.toml
-)
+	list(APPEND example_badname_SOURCES
+		cmake.toml
+	)
 
-set(CMKR_SOURCES ${example_badname_SOURCES})
-add_executable(example_badname)
+	set(CMKR_SOURCES ${example_badname_SOURCES})
+	add_executable(example_badname)
 
-if(example_badname_SOURCES)
-	target_sources(example_badname PRIVATE ${example_badname_SOURCES})
+	if(example_badname_SOURCES)
+		target_sources(example_badname PRIVATE ${example_badname_SOURCES})
+	endif()
+
+	get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
+	if(NOT CMKR_VS_STARTUP_PROJECT)
+		set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT example_badname)
+	endif()
+
+	source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${example_badname_SOURCES})
+
+	target_link_libraries(example_badname PRIVATE
+		sdkgenny
+	)
+
+	unset(CMKR_TARGET)
+	unset(CMKR_SOURCES)
 endif()
-
-get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
-if(NOT CMKR_VS_STARTUP_PROJECT)
-	set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT example_badname)
-endif()
-
-source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${example_badname_SOURCES})
-
-target_link_libraries(example_badname PRIVATE
-	sdkgenny
-)
-
-unset(CMKR_TARGET)
-unset(CMKR_SOURCES)
 
 # Target example_constants
-set(CMKR_TARGET example_constants)
-set(example_constants_SOURCES "")
+if(SDKGENNY_BUILD_EXAMPLES) # build-examples
+	set(CMKR_TARGET example_constants)
+	set(example_constants_SOURCES "")
 
-list(APPEND example_constants_SOURCES
-	"examples/Constants.cpp"
-)
+	list(APPEND example_constants_SOURCES
+		"examples/Constants.cpp"
+	)
 
-list(APPEND example_constants_SOURCES
-	cmake.toml
-)
+	list(APPEND example_constants_SOURCES
+		cmake.toml
+	)
 
-set(CMKR_SOURCES ${example_constants_SOURCES})
-add_executable(example_constants)
+	set(CMKR_SOURCES ${example_constants_SOURCES})
+	add_executable(example_constants)
 
-if(example_constants_SOURCES)
-	target_sources(example_constants PRIVATE ${example_constants_SOURCES})
+	if(example_constants_SOURCES)
+		target_sources(example_constants PRIVATE ${example_constants_SOURCES})
+	endif()
+
+	get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
+	if(NOT CMKR_VS_STARTUP_PROJECT)
+		set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT example_constants)
+	endif()
+
+	source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${example_constants_SOURCES})
+
+	target_link_libraries(example_constants PRIVATE
+		sdkgenny
+	)
+
+	unset(CMKR_TARGET)
+	unset(CMKR_SOURCES)
 endif()
-
-get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
-if(NOT CMKR_VS_STARTUP_PROJECT)
-	set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT example_constants)
-endif()
-
-source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${example_constants_SOURCES})
-
-target_link_libraries(example_constants PRIVATE
-	sdkgenny
-)
-
-unset(CMKR_TARGET)
-unset(CMKR_SOURCES)
 
 # Target example_parser
-set(CMKR_TARGET example_parser)
-set(example_parser_SOURCES "")
+if(SDKGENNY_BUILD_EXAMPLES) # build-examples
+	set(CMKR_TARGET example_parser)
+	set(example_parser_SOURCES "")
 
-list(APPEND example_parser_SOURCES
-	"examples/Parser.cpp"
-)
+	list(APPEND example_parser_SOURCES
+		"examples/Parser.cpp"
+	)
 
-list(APPEND example_parser_SOURCES
-	cmake.toml
-)
+	list(APPEND example_parser_SOURCES
+		cmake.toml
+	)
 
-set(CMKR_SOURCES ${example_parser_SOURCES})
-add_executable(example_parser)
+	set(CMKR_SOURCES ${example_parser_SOURCES})
+	add_executable(example_parser)
 
-if(example_parser_SOURCES)
-	target_sources(example_parser PRIVATE ${example_parser_SOURCES})
+	if(example_parser_SOURCES)
+		target_sources(example_parser PRIVATE ${example_parser_SOURCES})
+	endif()
+
+	get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
+	if(NOT CMKR_VS_STARTUP_PROJECT)
+		set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT example_parser)
+	endif()
+
+	source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${example_parser_SOURCES})
+
+	target_link_libraries(example_parser PRIVATE
+		sdkgenny
+		taocpp::pegtl
+	)
+
+	unset(CMKR_TARGET)
+	unset(CMKR_SOURCES)
 endif()
-
-get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
-if(NOT CMKR_VS_STARTUP_PROJECT)
-	set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT example_parser)
-endif()
-
-source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${example_parser_SOURCES})
-
-target_link_libraries(example_parser PRIVATE
-	sdkgenny
-	taocpp::pegtl
-)
-
-unset(CMKR_TARGET)
-unset(CMKR_SOURCES)
-
-enable_testing()
-
-add_test(
-	NAME
-		car
-	WORKING_DIRECTORY
-		${CMAKE_BINARY_DIR}
-	COMMAND
-		$<TARGET_FILE:example_car>
-)
-
-add_test(
-	NAME
-		bitfield
-	WORKING_DIRECTORY
-		${CMAKE_BINARY_DIR}
-	COMMAND
-		$<TARGET_FILE:example_bitfield>
-)
-
-add_test(
-	NAME
-		typename
-	WORKING_DIRECTORY
-		${CMAKE_BINARY_DIR}
-	COMMAND
-		$<TARGET_FILE:example_typename>
-)
-
-add_test(
-	NAME
-		usage
-	WORKING_DIRECTORY
-		${CMAKE_BINARY_DIR}
-	COMMAND
-		$<TARGET_FILE:example_usage>
-)
-
-add_test(
-	NAME
-		sdk
-	WORKING_DIRECTORY
-		${CMAKE_BINARY_DIR}
-	COMMAND
-		$<TARGET_FILE:example_sdk>
-)
-
-add_test(
-	NAME
-		dummydata
-	WORKING_DIRECTORY
-		${CMAKE_BINARY_DIR}
-	COMMAND
-		$<TARGET_FILE:example_dummydata>
-)
-
-add_test(
-	NAME
-		badname
-	WORKING_DIRECTORY
-		${CMAKE_BINARY_DIR}
-	COMMAND
-		$<TARGET_FILE:example_badname>
-)
-
-add_test(
-	NAME
-		constants
-	WORKING_DIRECTORY
-		${CMAKE_BINARY_DIR}
-	COMMAND
-		$<TARGET_FILE:example_constants>
-)
-
-add_test(
-	NAME
-		parser
-	WORKING_DIRECTORY
-		${CMAKE_BINARY_DIR}
-	COMMAND
-		$<TARGET_FILE:example_parser>
-)
 
