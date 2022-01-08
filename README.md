@@ -1,6 +1,6 @@
 # SdkGenny
 
-SdkGenny is a single file header framework for generating C++ compatible SDKs for third party applications.
+SdkGenny is a header-only framework for generating C++ compatible SDKs for third party applications.
 
 ## Installation
 
