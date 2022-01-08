@@ -69,8 +69,8 @@ public:
 ```
 
 ## Projects
+* [REFramework](https://github.com/praydog/REFramework) by [@praydog](https://github.com/praydog) - A mod framework for Resident-Evil 2
 * [GlacierGenny](https://github.com/praydog/GlacierGenny) by [@praydog](https://github.com/praydog) - An SDK generator for HITMAN3
-* [RE2 Mod Framework](https://github.com/praydog/RE2-Mod-Framework) by [@praydog](https://github.com/praydog) - A mod framework for Resident-Evil 2
 * [UE4Genny](https://github.com/cursey/ue4genny) - An SDK generator for Unreal Engine 4 games
 
 ## License
