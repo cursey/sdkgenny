@@ -951,13 +951,16 @@ public:
             }
 
             add_dep(fn->returns());
+
+            for (auto&& dep : fn->dependent_types()) {
+                add_dep(dep);
+            }
         }
 
         for (auto&& s : get_all<Struct>()) {
             auto s_deps = s->dependencies();
             deps.hard.merge(s_deps.hard);
             deps.soft.merge(s_deps.soft);
-
         }
 
         return deps;
