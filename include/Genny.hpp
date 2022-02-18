@@ -1572,7 +1572,9 @@ protected:
         std::unordered_set<Type*> types_to_include{};
 
         if (auto s = dynamic_cast<Struct*>(obj)) {
-            types_to_include = s->dependencies().hard;
+            auto deps = s->dependencies();
+            types_to_include = deps.hard;
+            types_to_include.merge(deps.soft);
             types_to_include.emplace(s);
         }
 
