@@ -784,6 +784,8 @@ public:
         }
     }
 
+    virtual void generate_forward_decl(std::ostream& os) const { os << "enum " << usable_name_decl() << ";\n"; }
+
     virtual void generate(std::ostream& os) const {
         os << "enum " << usable_name_decl();
         generate_type(os);
@@ -816,6 +818,7 @@ class EnumClass : public Enum {
 public:
     explicit EnumClass(std::string_view name) : Enum{name} {}
 
+    void generate_forward_decl(std::ostream& os) const override { os << "enum class" << usable_name_decl() << ";\n"; }
     void generate(std::ostream& os) const override {
         os << "enum class " << usable_name_decl();
         generate_type(os);
@@ -900,6 +903,64 @@ public:
         os << " {\n";
         generate_internal(os);
         os << "}; // Size: 0x" << std::hex << size() << "\n";
+    }
+
+    struct Dependencies {
+        std::unordered_set<Type*> hard{};
+        std::unordered_set<Type*> soft{};
+    };
+
+    Dependencies dependencies() { 
+        Dependencies deps{};
+
+        auto add_hard_dep = [&](Object* obj) {
+            if (obj != this && (obj->is_a<Struct>() || obj->is_a<Enum>())) {
+                deps.hard.emplace(dynamic_cast<Type*>(obj));
+            }
+        };
+        auto add_soft_dep = [&](Object* obj) {
+            if (auto ref = dynamic_cast<Reference*>(obj)) {
+                for (; ref->to()->is_a<Reference>(); ref = dynamic_cast<Reference*>(ref->to())) {
+                }
+
+                if (auto ty = ref->to(); ty != this && (ty->is_a<Struct>() || ty->is_a<Enum>())) {
+                    deps.soft.emplace(ty);
+                }
+            }
+        };
+        auto add_dep = [&](Object* obj) {
+            add_hard_dep(obj);
+            add_soft_dep(obj);
+        };
+
+        for (auto&& parent : parents()) {
+            add_hard_dep(parent);
+        }
+
+        for (auto&& var : get_all<Variable>()) {
+            add_dep(var->type());
+        }
+
+        for (auto&& var : get_all<Constant>()) {
+            add_dep(var->type());
+        }
+
+        for (auto&& fn : get_all<Function>()) {
+            for (auto&& param : fn->get_all<Parameter>()) {
+                add_dep(param->type());
+            }
+
+            add_dep(fn->returns());
+        }
+
+        for (auto&& s : get_all<Struct>()) {
+            auto s_deps = s->dependencies();
+            deps.hard.merge(s_deps.hard);
+            deps.soft.merge(s_deps.soft);
+
+        }
+
+        return deps;
     }
 
 protected:
@@ -1361,64 +1422,13 @@ protected:
             os << "#include \"" << include << "\"\n";
         }
 
-        std::unordered_set<Constant*> constants{};
-        std::unordered_set<Variable*> variables{};
-        std::unordered_set<Function*> functions{};
-        std::unordered_set<Struct*> structs{};
         std::unordered_set<Type*> types_to_include{};
-        std::unordered_set<Struct*> structs_to_forward_decl{};
-        std::function<void(Type*)> add_type = [&](Type* t) {
-            if (auto ref = dynamic_cast<Reference*>(t)) {
-                auto to = ref->to();
-
-                if (auto e = dynamic_cast<Enum*>(to)) {
-                    types_to_include.emplace(e);
-                } else if (auto s = dynamic_cast<Struct*>(to)) {
-                    structs_to_forward_decl.emplace(s);
-                } else {
-                    add_type(to);
-                }
-            } else if (auto gt = dynamic_cast<GenericType*>(t)) {
-                for (auto&& tt : gt->template_types()) {
-                    add_type(tt);
-                }
-            } else if (auto e = dynamic_cast<Enum*>(t)) {
-                types_to_include.emplace(e);
-            } else if (auto s = dynamic_cast<Struct*>(t)) {
-                types_to_include.emplace(s);
-            }
-        };
-
-        obj->get_all_in_children<Constant>(constants);
-        obj->get_all_in_children<Variable>(variables);
-        obj->get_all_in_children<Function>(functions);
-        obj->get_all_in_children<Struct>(structs);
-
-        for (auto&& c : constants) {
-            add_type(c->type());
-        }
-
-        for (auto&& var : variables) {
-            add_type(var->type());
-        }
-
-        for (auto&& fn : functions) {
-            for (auto&& param : fn->get_all<Parameter>()) {
-                add_type(param->type());
-            }
-            add_type(fn->returns());
-        }
-
-        for (auto&& s : structs) {
-            for (auto&& parent : s->parents()) {
-                types_to_include.emplace(parent); 
-            } 
-        }
+        std::unordered_set<Type*> types_to_forward_decl{};
 
         if (auto s = dynamic_cast<Struct*>(obj)) {
-            for (auto&& parent : s->parents()) {
-                types_to_include.emplace(parent);
-            }
+            auto deps = s->dependencies();
+            types_to_include = deps.hard;
+            types_to_forward_decl = deps.soft;
         }
 
         // Go through all the types to include and replace nested types with the types they're nested within.
@@ -1443,7 +1453,7 @@ protected:
             os << "#include \"" << include_path(obj, type).string() << "\"\n";
         }
 
-        for (auto&& type : structs_to_forward_decl) {
+        for (auto&& type : types_to_forward_decl) {
             // Only forward decl structs we haven't already included.
             if (types_to_include.find(type) == types_to_include.end() && !type->is_child_of(obj)) {
                 auto owners = type->owners<Namespace>();
@@ -1468,7 +1478,11 @@ protected:
                     os << " {\n";
                 }
 
-                type->generate_forward_decl(os);
+                if (auto s = dynamic_cast<Struct*>(type)) {
+                    s->generate_forward_decl(os);
+                } else if (auto e = dynamic_cast<Enum*>(type)) {
+                    e->generate_forward_decl(os);
+                }
 
                 if (owners.size() > 1 && m_generate_namespaces) {
                     os << "}\n";
@@ -1552,52 +1566,33 @@ protected:
             }
         }
 
-        std::unordered_set<Variable*> variables{};
-        std::unordered_set<Function*> functions{};
         std::unordered_set<Type*> types_to_include{};
-        std::function<void(Type*)> add_type = [&](Type* t) {
-            if (auto ref = dynamic_cast<Reference*>(t)) {
-                auto to = ref->to();
 
-                if (auto e = dynamic_cast<Enum*>(to)) {
-                    types_to_include.emplace(e);
-                } else if (auto s = dynamic_cast<Struct*>(to)) {
-                    types_to_include.emplace(s);
-                } else {
-                    add_type(to);
-                }
-            } else if (auto gt = dynamic_cast<GenericType*>(t)) {
-                for (auto&& tt : gt->template_types()) {
-                    add_type(tt);
-                }
-            } else if (auto e = dynamic_cast<Enum*>(t)) {
-                types_to_include.emplace(e);
-            } else if (auto s = dynamic_cast<Struct*>(t)) {
-                types_to_include.emplace(s);
-            }
-        };
-
-        if (obj->is_a<Type>()) {
-            add_type(obj);
+        if (auto s = dynamic_cast<Struct*>(obj)) {
+            types_to_include = s->dependencies().hard;
+            types_to_include.emplace(s);
         }
 
-        obj->get_all_in_children<Function>(functions);
+        // Go through all the types to include and replace nested types with the types they're nested within.
+        for (auto it = types_to_include.begin(); it != types_to_include.end();) {
+            if (auto topmost = (*it)->topmost_owner<Struct>()) {
+                it = types_to_include.erase(it);
 
-        for (auto&& fn : functions) {
-            for (auto&& param : fn->get_all<Parameter>()) {
-                add_type(param->type());
+                if (auto&& [_, was_inserted] = types_to_include.emplace(topmost); was_inserted) {
+                    it = types_to_include.begin();
+                }
+            } else {
+                ++it;
             }
-            for (auto&& dependent : fn->dependent_types()) {
-                add_type(dependent);
-            }
-            add_type(fn->returns());
         }
 
         for (auto&& type : types_to_include) {
-            if (!type->is_child_of(obj)) {
-                os << "#include \"" << include_path(obj, type).string() << "\"\n";
-            }
+            os << "#include \"" << include_path(obj, type).string() << "\"\n";
         }
+
+        std::unordered_set<Function*> functions{};
+
+        obj->get_all_in_children<Function>(functions);
 
         for (auto&& fn : functions) {
             // Skip pure virtual functions.
