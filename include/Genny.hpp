@@ -957,6 +957,10 @@ public:
             }
         };
         auto add_dep = [&](Object* obj) {
+            while (auto arr = dynamic_cast<Array*>(obj)) {
+                obj = arr->of();
+            }
+
             add_hard_dep(obj);
             add_soft_dep(obj);
         };
