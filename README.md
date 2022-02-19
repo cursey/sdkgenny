@@ -8,7 +8,7 @@ Copy `Genny.hpp` from the `include/` directory into your project and `#include` 
 
 ## Usage
 Here is a short example of how to use SdkGenny. This does not showcase every feature. For more examples check the `examples/` directory.
-```
+```C++
 // Make an SDK generator.
 genny::Sdk sdk{};
 
@@ -41,7 +41,7 @@ sdk.generate(std::filesystem::current_path() / "usage_sdk");
 Will produce the following 2 files
 
 ### `foobar/Foo.hpp`
-```
+```C++
 #pragma once
 namespace foobar {
 #pragma pack(push, 1)
@@ -55,7 +55,7 @@ public:
 ```
 
 ### `foobar/Bar.hpp`
-```
+```C++
 #pragma once
 #include ".\Foo.hpp"
 namespace foobar {
