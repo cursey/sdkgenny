@@ -910,11 +910,12 @@ public:
         std::unordered_set<Type*> soft{};
     };
 
-    Dependencies dependencies() { 
+    Dependencies dependencies() {
         Dependencies deps{};
 
         auto add_hard_dep = [&](Object* obj) {
-            if (obj != this && (obj->is_a<Struct>() || obj->is_a<Enum>())) {
+            if (obj != nullptr && obj != this && !obj->is_child_of(this) &&
+                (obj->is_a<Struct>() || obj->is_a<Enum>())) {
                 deps.hard.emplace(dynamic_cast<Type*>(obj));
             }
         };
@@ -923,7 +924,8 @@ public:
                 for (; ref->to()->is_a<Reference>(); ref = dynamic_cast<Reference*>(ref->to())) {
                 }
 
-                if (auto ty = ref->to(); ty != this && (ty->is_a<Struct>() || ty->is_a<Enum>())) {
+                if (auto ty = ref->to(); ty != nullptr && ty != this && !obj->is_child_of(this) &&
+                                         (ty->is_a<Struct>() || ty->is_a<Enum>())) {
                     deps.soft.emplace(ty);
                 }
             }
@@ -961,6 +963,13 @@ public:
             auto s_deps = s->dependencies();
             deps.hard.merge(s_deps.hard);
             deps.soft.merge(s_deps.soft);
+        }
+
+        // If a type is both a hard and soft dependency, remove it from the soft dependencies.
+        for (auto&& dep : deps.hard) {
+            if (deps.soft.find(dep) != deps.soft.end()) {
+                deps.soft.erase(dep);
+            }
         }
 
         return deps;
@@ -1457,39 +1466,36 @@ protected:
         }
 
         for (auto&& type : types_to_forward_decl) {
-            // Only forward decl structs we haven't already included.
-            if (types_to_include.find(type) == types_to_include.end() && !type->is_child_of(obj)) {
-                auto owners = type->owners<Namespace>();
+            auto owners = type->owners<Namespace>();
 
-                if (owners.size() > 1 && m_generate_namespaces) {
-                    std::reverse(owners.begin(), owners.end());
+            if (owners.size() > 1 && m_generate_namespaces) {
+                std::reverse(owners.begin(), owners.end());
 
-                    os << "namespace ";
+                os << "namespace ";
 
-                    for (auto&& owner : owners) {
-                        if (owner->usable_name().empty()) {
-                            continue;
-                        }
-
-                        os << owner->usable_name();
-
-                        if (owner != owners.back()) {
-                            os << "::";
-                        }
+                for (auto&& owner : owners) {
+                    if (owner->usable_name().empty()) {
+                        continue;
                     }
 
-                    os << " {\n";
+                    os << owner->usable_name();
+
+                    if (owner != owners.back()) {
+                        os << "::";
+                    }
                 }
 
-                if (auto s = dynamic_cast<Struct*>(type)) {
-                    s->generate_forward_decl(os);
-                } else if (auto e = dynamic_cast<Enum*>(type)) {
-                    e->generate_forward_decl(os);
-                }
+                os << " {\n";
+            }
 
-                if (owners.size() > 1 && m_generate_namespaces) {
-                    os << "}\n";
-                }
+            if (auto s = dynamic_cast<Struct*>(type)) {
+                s->generate_forward_decl(os);
+            } else if (auto e = dynamic_cast<Enum*>(type)) {
+                e->generate_forward_decl(os);
+            }
+
+            if (owners.size() > 1 && m_generate_namespaces) {
+                os << "}\n";
             }
         }
 
