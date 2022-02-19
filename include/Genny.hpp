@@ -267,6 +267,32 @@ public:
     // The name used for file generation (only for types).
     std::function<std::string()> file_name = usable_name;
 
+    std::filesystem::path path() {
+        if (m_owner == nullptr) {
+            return file_name();
+        }
+
+        std::filesystem::path p{};
+        auto os = owners<Object>();
+
+        std::reverse(os.begin(), os.end());
+
+        for (auto&& o : os) {
+            if (o->is_a<Namespace>()) {
+                p /= o->file_name();
+            } else if (o->is_a<Struct>()) {
+                p /= o->file_name();
+                break;
+            }
+        }
+
+        if (m_owner->is_a<Namespace>()) {
+            p /= file_name();
+        }
+
+        return p;
+    }
+
 protected:
     friend class Type;
     friend class Pointer;
@@ -1436,6 +1462,7 @@ protected:
 
         std::unordered_set<Type*> types_to_include{};
         std::unordered_set<Type*> types_to_forward_decl{};
+        std::set<std::filesystem::path> includes{};
 
         if (auto s = dynamic_cast<Struct*>(obj)) {
             auto deps = s->dependencies();
@@ -1443,26 +1470,12 @@ protected:
             types_to_forward_decl = deps.soft;
         }
 
-        // Go through all the types to include and replace nested types with the types they're nested within.
-        for (auto it = types_to_include.begin(); it != types_to_include.end();) {
-            if (auto topmost = (*it)->topmost_owner<Struct>()) {
-                it = types_to_include.erase(it);
-
-                // Skip adding the topmost owner if it's the object we're generating a header for.
-                if (topmost == (Object*)obj) {
-                    continue;
-                }
-
-                if (auto&& [_, was_inserted] = types_to_include.emplace(topmost); was_inserted) {
-                    it = types_to_include.begin();
-                }
-            } else {
-                ++it;
-            }
+        for (auto&& ty : types_to_include) {
+            includes.emplace(ty->path() += m_header_extension);
         }
 
-        for (auto&& type : types_to_include) {
-            os << "#include \"" << include_path(obj, type).string() << "\"\n";
+        for (auto&& inc : includes) {
+            os << "#include \"" << inc.string() << "\"\n";
         }
 
         for (auto&& type : types_to_forward_decl) {
@@ -1584,21 +1597,14 @@ protected:
             types_to_include.emplace(s);
         }
 
-        // Go through all the types to include and replace nested types with the types they're nested within.
-        for (auto it = types_to_include.begin(); it != types_to_include.end();) {
-            if (auto topmost = (*it)->topmost_owner<Struct>()) {
-                it = types_to_include.erase(it);
+        std::set<std::filesystem::path> includes{};
 
-                if (auto&& [_, was_inserted] = types_to_include.emplace(topmost); was_inserted) {
-                    it = types_to_include.begin();
-                }
-            } else {
-                ++it;
-            }
+        for (auto&& ty : types_to_include) {
+            includes.emplace(ty->path() += m_header_extension);
         }
 
-        for (auto&& type : types_to_include) {
-            os << "#include \"" << include_path(obj, type).string() << "\"\n";
+        for (auto&& inc : includes) {
+            os << "#include \"" << inc.string() << "\"\n";
         }
 
         std::unordered_set<Function*> functions{};
