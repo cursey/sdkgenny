@@ -1396,46 +1396,8 @@ protected:
     std::string m_source_extension{".cpp"};
     bool m_generate_namespaces{true};
 
-    std::filesystem::path path_for_object(Object* obj) const {
-        std::filesystem::path path{};
-        auto owners = obj->owners<Namespace>();
-
-        std::reverse(owners.begin(), owners.end());
-
-        for (auto&& owner : owners) {
-            if (owner->file_name().empty()) {
-                continue;
-            }
-
-            path /= owner->file_name();
-        }
-
-        path /= obj->file_name();
-
-        return path;
-    }
-
-    std::filesystem::path include_path_for_object(Object* obj) const {
-        auto path = path_for_object(obj);
-        path += m_header_extension;
-        return path;
-    }
-
-    std::filesystem::path source_path_for_object(Object* obj) const {
-        auto path = path_for_object(obj);
-        path += m_source_extension;
-        return path;
-    }
-
-    std::filesystem::path include_path(Object* from, Object* to) const {
-        auto to_path = std::filesystem::absolute(include_path_for_object(to));
-        auto from_path = std::filesystem::absolute(include_path_for_object(from));
-        auto rel_path = std::filesystem::relative(to_path.parent_path(), from_path.parent_path()) / to_path.filename();
-        return rel_path;
-    }
-
     template <typename T> void generate_header(const std::filesystem::path& sdk_path, T* obj) const {
-        auto obj_inc_path = sdk_path / include_path_for_object(obj);
+        auto obj_inc_path = sdk_path / (obj->path() += m_header_extension);
         std::ofstream file_list{sdk_path / "file_list.txt", std::ios::app};
         file_list << "\"" << obj_inc_path.string() << "\" \\\n";
         std::filesystem::create_directories(obj_inc_path.parent_path());
@@ -1572,7 +1534,7 @@ protected:
             return;
         }
 
-        auto obj_src_path = sdk_path / source_path_for_object(obj);
+        auto obj_src_path = sdk_path / (obj->path() += m_source_extension);
         std::ofstream file_list{sdk_path / "file_list.txt", std::ios::app};
         file_list << "\"" << obj_src_path.string() << "\" \\\n";
 
