@@ -987,8 +987,14 @@ public:
 
         for (auto&& s : get_all<Struct>()) {
             auto s_deps = s->dependencies();
-            deps.hard.merge(s_deps.hard);
-            deps.soft.merge(s_deps.soft);
+
+            for (auto&& dep : s_deps.hard) {
+                add_hard_dep(dep);
+            }
+
+            for (auto&& dep : s_deps.soft) {
+                add_soft_dep(dep);
+            }
         }
 
         // If a type is both a hard and soft dependency, remove it from the soft dependencies.
