@@ -346,6 +346,41 @@ if(SDKGENNY_BUILD_EXAMPLES) # build-examples
 	unset(CMKR_SOURCES)
 endif()
 
+# Target example_multiple_inheritance
+if(SDKGENNY_BUILD_EXAMPLES) # build-examples
+	set(CMKR_TARGET example_multiple_inheritance)
+	set(example_multiple_inheritance_SOURCES "")
+
+	list(APPEND example_multiple_inheritance_SOURCES
+		"examples/MultipleInheritance.cpp"
+	)
+
+	list(APPEND example_multiple_inheritance_SOURCES
+		cmake.toml
+	)
+
+	set(CMKR_SOURCES ${example_multiple_inheritance_SOURCES})
+	add_executable(example_multiple_inheritance)
+
+	if(example_multiple_inheritance_SOURCES)
+		target_sources(example_multiple_inheritance PRIVATE ${example_multiple_inheritance_SOURCES})
+	endif()
+
+	get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
+	if(NOT CMKR_VS_STARTUP_PROJECT)
+		set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT example_multiple_inheritance)
+	endif()
+
+	source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${example_multiple_inheritance_SOURCES})
+
+	target_link_libraries(example_multiple_inheritance PRIVATE
+		sdkgenny
+	)
+
+	unset(CMKR_TARGET)
+	unset(CMKR_SOURCES)
+endif()
+
 # Target example_parser
 if(SDKGENNY_BUILD_EXAMPLES) # build-examples
 	set(CMKR_TARGET example_parser)

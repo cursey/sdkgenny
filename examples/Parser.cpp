@@ -260,6 +260,27 @@ public:
 static_assert(sizeof(Qux) == 0xF8);
 )";
 
+constexpr auto g_multiple_inheritance = R"(
+type int 4
+type float 4
+
+struct Person {
+    int age
+}
+
+struct Student : Person {
+    float gpa
+}
+
+struct Faculty : Person {
+    int wage
+}
+
+struct TA : Student, Faculty {
+    int hours
+}
+)";
+
 namespace pegtl = tao::pegtl;
 
 int main(int argc, char* argv[]) {
@@ -280,6 +301,7 @@ int main(int argc, char* argv[]) {
     // pegtl::string_input in{g_include, "include_str"};
     // pegtl::string_input in{g_fwd_decl_members, "fwd_decl_members"};
     // pegtl::string_input in{g_reclass, "reclass"};
+    // pegtl::string_input in{g_multiple_inheritance, "multiple_inheritance"};
 
     try {
         auto r = pegtl::parse<genny::parser::Grammar, genny::parser::Action>(in, s);

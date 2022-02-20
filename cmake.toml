@@ -69,6 +69,12 @@ type = "executable"
 sources = ["examples/Constants.cpp"]
 link-libraries = ["sdkgenny"]
 
+[target.example_multiple_inheritance]
+condition = "build-examples"
+type = "executable"
+sources = ["examples/MultipleInheritance.cpp"]
+link-libraries = ["sdkgenny"]
+
 [target.example_parser]
 condition = "build-examples"
 type = "executable"
