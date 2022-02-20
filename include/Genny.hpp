@@ -1447,7 +1447,7 @@ protected:
         }
 
         for (auto&& inc : includes) {
-            os << "#include \"" << inc.string() << "\"\n";
+            os << "#include \"" << std::filesystem::relative(inc, obj->path().parent_path()).string() << "\"\n";
         }
 
         for (auto&& type : types_to_forward_decl) {
@@ -1576,7 +1576,7 @@ protected:
         }
 
         for (auto&& inc : includes) {
-            os << "#include \"" << inc.string() << "\"\n";
+            os << "#include \"" << std::filesystem::relative(inc, obj->path().parent_path()).string() << "\"\n";
         }
 
         std::unordered_set<Function*> functions{};
