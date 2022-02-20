@@ -642,9 +642,9 @@ public:
         return this;
     }
 
-    auto&& dependent_types() const { return m_dependent_types; }
+    auto&& dependencies() const { return m_dependencies; }
     auto depends_on(Type* type) {
-        m_dependent_types.emplace(type);
+        m_dependencies.emplace(type);
         return this;
     }
 
@@ -668,7 +668,7 @@ public:
 protected:
     Type* m_return_value{};
     std::string m_procedure{};
-    std::unordered_set<Type*> m_dependent_types{};
+    std::unordered_set<Type*> m_dependencies{};
     bool m_is_defined{true};
 
     void generate_prototype(std::ostream& os) const {
@@ -983,10 +983,6 @@ public:
             }
 
             add_dep(fn->returns());
-
-            for (auto&& dep : fn->dependent_types()) {
-                add_dep(dep);
-            }
         }
 
         for (auto&& s : get_all<Struct>()) {
@@ -1530,17 +1526,20 @@ protected:
             return;
         }
 
-        // Skip generating a source file for an object if the functions it does have are all undefined.
-        auto any_defined = false;
+        // Skip generating a source file for an object if all the functions it does have lack a procedure.
+        std::unordered_set<Function*> functions{};
+        obj->get_all_in_children<Function>(functions);
 
-        for (auto&& fn : obj->get_all<Function>()) {
-            if (fn->defined()) {
-                any_defined = true;
+        auto any_procedure = false;
+
+        for (auto&& fn : functions) {
+            if (!fn->procedure().empty()) {
+                any_procedure = true;
                 break;
             }
         }
 
-        if (!any_defined) {
+        if (!any_procedure) {
             return;
         }
 
@@ -1569,6 +1568,11 @@ protected:
             types_to_include.emplace(s);
         }
 
+        for (auto&& fn : functions) {
+            auto deps = fn->dependencies();
+            types_to_include.merge(deps);
+        }
+
         std::set<std::filesystem::path> includes{};
 
         for (auto&& ty : types_to_include) {
@@ -1578,10 +1582,6 @@ protected:
         for (auto&& inc : includes) {
             os << "#include \"" << std::filesystem::relative(inc, obj->path().parent_path()).string() << "\"\n";
         }
-
-        std::unordered_set<Function*> functions{};
-
-        obj->get_all_in_children<Function>(functions);
 
         for (auto&& fn : functions) {
             // Skip pure virtual functions.
