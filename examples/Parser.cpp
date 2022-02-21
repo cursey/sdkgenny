@@ -4,6 +4,8 @@
 
 #include <GennyParser.hpp>
 
+#include <tao/pegtl/contrib/analyze.hpp>
+
 constexpr auto g_example_str = R"(
 type float 4
 type double 8
@@ -284,6 +286,8 @@ struct TA : Student, Faculty {
 namespace pegtl = tao::pegtl;
 
 int main(int argc, char* argv[]) {
+    tao::pegtl::analyze<genny::parser::Grammar>(1);
+
     genny::Sdk sdk{};
 
     sdk.header_extension(".hxx");
