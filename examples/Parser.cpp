@@ -286,7 +286,7 @@ struct TA : Student, Faculty {
 namespace pegtl = tao::pegtl;
 
 int main(int argc, char* argv[]) {
-    tao::pegtl::analyze<genny::parser::Grammar>(1);
+    auto _ = tao::pegtl::analyze<genny::parser::Grammar>(1);
 
     genny::Sdk sdk{};
 

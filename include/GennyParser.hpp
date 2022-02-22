@@ -226,11 +226,13 @@ template <> struct Action<IncludeDecl> {
         auto backup_filepath = s.filepath;
 
         try {
+            auto newstate = std::make_unique<State>();
             auto include_path = std::move(s.include_path);
-            s.filepath = (s.filepath.has_extension() ? s.filepath.parent_path() : s.filepath) / include_path;
-            file_input f{s.filepath};
+            newstate->filepath = (s.filepath.has_extension() ? s.filepath.parent_path() : s.filepath) / include_path;
+            newstate->parents.push_back(s.parents.front());
+            file_input f{newstate->filepath};
 
-            if (!parse<genny::parser::Grammar, genny::parser::Action>(f, s)) {
+            if (!parse<genny::parser::Grammar, genny::parser::Action>(f, *newstate)) {
                 throw parse_error{"Failed to parse file '" + include_path + "'", in};
             }
         } catch (const parse_error& e) {
