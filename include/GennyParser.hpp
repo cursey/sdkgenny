@@ -107,8 +107,8 @@ struct FnStaticId : TAO_PEGTL_STRING("static") {};
 struct FnVirtualId : TAO_PEGTL_STRING("virtual") {};
 struct FnPrefix : sor<FnStaticId, FnVirtualId> {};
 struct FnVirtualIndex : Num {};
-struct FnDecl
-    : seq<opt<FnPrefix>, Seps, FnRet, Seps, FnName, Seps, FnParams, Seps, opt_must<one<'@'>, Seps, FnVirtualIndex>, Endl> {};
+struct FnDecl : seq<opt<FnPrefix>, Seps, FnRet, Seps, FnName, Seps, FnParams, Seps,
+                    opt_must<one<'@'>, Seps, FnVirtualIndex>, Endl> {};
 
 struct StaticAssert : disable<TAO_PEGTL_STRING("static_assert"), until<one<';'>>> {};
 
@@ -208,25 +208,21 @@ struct State {
 template <typename Rule> struct Action : nothing<Rule> {};
 
 template <> struct Action<Metadata> {
-    template <typename ActionInput> static void apply(const ActionInput& in, State& s) {
+    template <typename Input> static void apply(const Input& in, State& s) {
         s.metadata_parts.emplace_back(in.string_view());
     }
 };
 
 template <> struct Action<MetadataDecl> {
-    template <typename ActionInput> static void apply(const ActionInput& in, State& s) {
-        s.metadata = std::move(s.metadata_parts);
-    }
+    template <typename Input> static void apply(const Input& in, State& s) { s.metadata = std::move(s.metadata_parts); }
 };
 
 template <> struct Action<IncludePath> {
-    template <typename ActionInput> static void apply(const ActionInput& in, State& s) {
-        s.include_path = in.string_view();
-    }
+    template <typename Input> static void apply(const Input& in, State& s) { s.include_path = in.string_view(); }
 };
 
 template <> struct Action<IncludeDecl> {
-    template <typename ActionInput> static void apply(const ActionInput& in, State& s) {
+    template <typename Input> static void apply(const Input& in, State& s) {
         auto backup_filepath = s.filepath;
 
         try {
@@ -248,17 +244,17 @@ template <> struct Action<IncludeDecl> {
 };
 
 template <> struct Action<NsName> {
-    template <typename ActionInput> static void apply(const ActionInput& in, State& s) {
+    template <typename Input> static void apply(const Input& in, State& s) {
         s.ns_parts.emplace_back(in.string_view());
     }
 };
 
 template <> struct Action<NsNameList> {
-    template <typename ActionInput> static void apply(const ActionInput& in, State& s) { s.ns = std::move(s.ns_parts); }
+    template <typename Input> static void apply(const Input& in, State& s) { s.ns = std::move(s.ns_parts); }
 };
 
 template <> struct Action<NsDecl> {
-    template <typename ActionInput> static void apply(const ActionInput& in, State& s) {
+    template <typename Input> static void apply(const Input& in, State& s) {
         if (auto cur_ns = dynamic_cast<Namespace*>(s.parents.back())) {
             auto depth = 0;
 
@@ -277,7 +273,7 @@ template <> struct Action<NsDecl> {
 };
 
 template <> struct Action<NsExpr> {
-    template <typename ActionInput> static void apply(const ActionInput& in, State& s) {
+    template <typename Input> static void apply(const Input& in, State& s) {
         auto depth = s.namespace_depth.top();
 
         s.namespace_depth.pop();
@@ -289,19 +285,17 @@ template <> struct Action<NsExpr> {
 };
 
 template <> struct Action<TypeSize> {
-    template <typename ActionInput> static void apply(const ActionInput& in, State& s) {
+    template <typename Input> static void apply(const Input& in, State& s) {
         s.type_size = std::stoi(in.string(), nullptr, 0);
     }
 };
 
 template <> struct Action<TypeName> {
-    template <typename ActionInput> static void apply(const ActionInput& in, State& s) {
-        s.type_name = in.string_view();
-    }
+    template <typename Input> static void apply(const Input& in, State& s) { s.type_name = in.string_view(); }
 };
 
 template <> struct Action<TypeDecl> {
-    template <typename ActionInput> static void apply(const ActionInput& in, State& s) {
+    template <typename Input> static void apply(const Input& in, State& s) {
         if (auto ns = dynamic_cast<Namespace*>(s.parents.back())) {
             auto type = ns->type(s.type_name);
 
@@ -320,23 +314,19 @@ template <> struct Action<TypeDecl> {
 };
 
 template <> struct Action<EnumName> {
-    template <typename ActionInput> static void apply(const ActionInput& in, State& s) {
-        s.enum_name = in.string_view();
-    }
+    template <typename Input> static void apply(const Input& in, State& s) { s.enum_name = in.string_view(); }
 };
 
 template <> struct Action<EnumType> {
-    template <typename ActionInput> static void apply(const ActionInput& in, State& s) {
-        s.enum_type = in.string_view();
-    }
+    template <typename Input> static void apply(const Input& in, State& s) { s.enum_type = in.string_view(); }
 };
 
 template <> struct Action<EnumClassId> {
-    template <typename ActionInput> static void apply(const ActionInput& in, State& s) { s.enum_class = true; }
+    template <typename Input> static void apply(const Input& in, State& s) { s.enum_class = true; }
 };
 
 template <> struct Action<EnumExpr> {
-    template <typename ActionInput> static void apply(const ActionInput& in, State& s) {
+    template <typename Input> static void apply(const Input& in, State& s) {
         Enum* enum_{};
 
         if (auto p = dynamic_cast<Namespace*>(s.parents.back())) {
@@ -367,43 +357,39 @@ template <> struct Action<EnumExpr> {
 };
 
 template <> struct Action<EnumVal> {
-    template <typename ActionInput> static void apply(const ActionInput& in, State& s) {
+    template <typename Input> static void apply(const Input& in, State& s) {
         s.enum_val = std::stoul(in.string(), nullptr, 0);
     }
 };
 
 template <> struct Action<EnumValName> {
-    template <typename ActionInput> static void apply(const ActionInput& in, State& s) {
-        s.enum_val_name = in.string_view();
-    }
+    template <typename Input> static void apply(const Input& in, State& s) { s.enum_val_name = in.string_view(); }
 };
 
 template <> struct Action<EnumValDecl> {
-    template <typename ActionInput> static void apply(const ActionInput& in, State& s) {
+    template <typename Input> static void apply(const Input& in, State& s) {
         s.enum_vals.emplace_back(s.enum_val_name, s.enum_val);
     }
 };
 
 template <> struct Action<StructId> {
-    template <typename ActionInput> static void apply(const ActionInput& in, State& s) {
+    template <typename Input> static void apply(const Input& in, State& s) {
         s.struct_is_class = in.string_view() == "class";
     }
 };
 
 template <> struct Action<StructName> {
-    template <typename ActionInput> static void apply(const ActionInput& in, State& s) {
-        s.struct_name = in.string_view();
-    }
+    template <typename Input> static void apply(const Input& in, State& s) { s.struct_name = in.string_view(); }
 };
 
 template <> struct Action<StructParentPart> {
-    template <typename ActionInput> static void apply(const ActionInput& in, State& s) {
+    template <typename Input> static void apply(const Input& in, State& s) {
         s.struct_parent.emplace_back(in.string_view());
     }
 };
 
 template <> struct Action<StructParent> {
-    template <typename ActionInput> static void apply(const ActionInput& in, State& s) {
+    template <typename Input> static void apply(const Input& in, State& s) {
         auto parent = s.lookup<genny::Struct>(s.struct_parent);
 
         if (parent == nullptr) {
@@ -416,13 +402,13 @@ template <> struct Action<StructParent> {
 };
 
 template <> struct Action<StructSize> {
-    template <typename ActionInput> static void apply(const ActionInput& in, State& s) {
+    template <typename Input> static void apply(const Input& in, State& s) {
         s.struct_size = std::stoull(in.string(), nullptr, 0);
     }
 };
 
 template <> struct Action<StructDecl> {
-    template <typename ActionInput> static void apply(const ActionInput& in, State& s) {
+    template <typename Input> static void apply(const Input& in, State& s) {
         Struct* struct_{};
 
         if (auto p = dynamic_cast<Namespace*>(s.parents.back())) {
@@ -458,23 +444,21 @@ template <> struct Action<StructDecl> {
 };
 
 template <> struct Action<StructExpr> {
-    template <typename ActionInput> static void apply(const ActionInput& in, State& s) { s.parents.pop_back(); }
+    template <typename Input> static void apply(const Input& in, State& s) { s.parents.pop_back(); }
 };
 
 template <> struct Action<VarTypeHintId> {
-    template <typename ActionInput> static void apply(const ActionInput& in, State& s) {
-        s.var_type_hint = in.string_view();
-    }
+    template <typename Input> static void apply(const Input& in, State& s) { s.var_type_hint = in.string_view(); }
 };
 
 template <> struct Action<VarTypeNamePart> {
-    template <typename ActionInput> static void apply(const ActionInput& in, State& s) {
+    template <typename Input> static void apply(const Input& in, State& s) {
         s.var_type.emplace_back(in.string_view());
     }
 };
 
 template <> struct Action<VarTypeName> {
-    template <typename ActionInput> static void apply(const ActionInput& in, State& s) {
+    template <typename Input> static void apply(const Input& in, State& s) {
         s.cur_type = s.lookup<Type>(s.var_type);
 
         if (s.cur_type == nullptr && !s.var_type_hint.empty()) {
@@ -505,7 +489,7 @@ template <> struct Action<VarTypeName> {
 };
 
 template <> struct Action<VarTypePtr> {
-    template <typename ActionInput> static void apply(const ActionInput& in, State& s) {
+    template <typename Input> static void apply(const Input& in, State& s) {
         if (s.cur_type == nullptr) {
             throw parse_error{"The current type is null", in};
         }
@@ -515,13 +499,13 @@ template <> struct Action<VarTypePtr> {
 };
 
 template <> struct Action<VarTypeArrayCount> {
-    template <typename ActionInput> static void apply(const ActionInput& in, State& s) {
+    template <typename Input> static void apply(const Input& in, State& s) {
         s.var_type_array_count = std::stoull(in.string(), nullptr, 0);
     }
 };
 
 template <> struct Action<VarTypeArray> {
-    template <typename ActionInput> static void apply(const ActionInput& in, State& s) {
+    template <typename Input> static void apply(const Input& in, State& s) {
         if (!s.var_type_array_count) {
             throw parse_error{"The array count is invalid", in};
         }
@@ -532,31 +516,29 @@ template <> struct Action<VarTypeArray> {
 };
 
 template <> struct Action<VarName> {
-    template <typename ActionInput> static void apply(const ActionInput& in, State& s) {
-        s.var_name = in.string_view();
-    }
+    template <typename Input> static void apply(const Input& in, State& s) { s.var_name = in.string_view(); }
 };
 
 template <> struct Action<VarOffset> {
-    template <typename ActionInput> static void apply(const ActionInput& in, State& s) {
+    template <typename Input> static void apply(const Input& in, State& s) {
         s.var_offset = std::stoull(in.string(), nullptr, 0);
     }
 };
 
 template <> struct Action<VarDelta> {
-    template <typename ActionInput> static void apply(const ActionInput& in, State& s) {
+    template <typename Input> static void apply(const Input& in, State& s) {
         s.var_delta = std::stoull(in.string(), nullptr, 0);
     }
 };
 
 template <> struct Action<VarBitSize> {
-    template <typename ActionInput> static void apply(const ActionInput& in, State& s) {
+    template <typename Input> static void apply(const Input& in, State& s) {
         s.var_bit_size = std::stoull(in.string(), nullptr, 0);
     }
 };
 
 template <> struct Action<VarDecl> {
-    template <typename ActionInput> static void apply(const ActionInput& in, State& s) {
+    template <typename Input> static void apply(const Input& in, State& s) {
         if (s.cur_type == nullptr) {
             throw parse_error{"The current type is null", in};
         }
@@ -611,51 +593,47 @@ template <> struct Action<VarDecl> {
 };
 
 template <> struct Action<FnRetType> {
-    template <typename ActionInput> static void apply(const ActionInput& in, State& s) { s.fn_ret_type = s.cur_type; }
+    template <typename Input> static void apply(const Input& in, State& s) { s.fn_ret_type = s.cur_type; }
 };
 
 template <> struct Action<FnName> {
-    template <typename ActionInput> static void apply(const ActionInput& in, State& s) { s.fn_name = in.string_view(); }
+    template <typename Input> static void apply(const Input& in, State& s) { s.fn_name = in.string_view(); }
 };
 
 template <> struct Action<FnParamType> {
-    template <typename ActionInput> static void apply(const ActionInput& in, State& s) {
-        s.cur_param.type = s.cur_type;
-    }
+    template <typename Input> static void apply(const Input& in, State& s) { s.cur_param.type = s.cur_type; }
 };
 
 template <> struct Action<FnParamName> {
-    template <typename ActionInput> static void apply(const ActionInput& in, State& s) {
-        s.cur_param.name = in.string_view();
-    }
+    template <typename Input> static void apply(const Input& in, State& s) { s.cur_param.name = in.string_view(); }
 };
 
 template <> struct Action<FnParam> {
-    template <typename ActionInput> static void apply(const ActionInput& in, State& s) {
+    template <typename Input> static void apply(const Input& in, State& s) {
         s.fn_params.emplace_back(std::move(s.cur_param));
     }
 };
 
 template <> struct Action<FnStaticId> {
-    template <typename ActionInput> static void apply(const ActionInput& in, State& s) { s.fn_is_static = true; }
+    template <typename Input> static void apply(const Input& in, State& s) { s.fn_is_static = true; }
 };
 
 template <> struct Action<FnVirtualId> {
-    template <typename ActionInput> static void apply(const ActionInput& in, State& s) { s.fn_is_virtual = true; }
+    template <typename Input> static void apply(const Input& in, State& s) { s.fn_is_virtual = true; }
 };
 
 template <> struct Action<FnVirtualIndex> {
-    template <typename ActionInput> static void apply(const ActionInput& in, State& s) {
+    template <typename Input> static void apply(const Input& in, State& s) {
         if (!s.fn_is_virtual) {
             throw parse_error{"Only virtual methods can specify a virtual index", in};
         }
 
-        s.fn_virtual_index = std::stoul(in.string(), nullptr, 0); 
+        s.fn_virtual_index = std::stoul(in.string(), nullptr, 0);
     }
 };
 
 template <> struct Action<FnDecl> {
-    template <typename ActionInput> static void apply(const ActionInput& in, State& s) {
+    template <typename Input> static void apply(const Input& in, State& s) {
         if (auto struct_ = dynamic_cast<Struct*>(s.parents.back())) {
             Function* fn{};
 
