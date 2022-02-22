@@ -133,7 +133,7 @@ struct Nested {
 }
 
 class CoolClass {
-    Nested nest
+    Nested nest @ 8
     virtual int say_hi(char* name)
     virtual void say_hello_world() @ 1
     virtual void say_goodbye() @ 10
