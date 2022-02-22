@@ -264,12 +264,9 @@ public:
     // The name used when declaring the object (only for types).
     std::function<std::string()> usable_name_decl = usable_name;
 
-    // The name used for file generation (only for types).
-    std::function<std::string()> file_name = usable_name;
-
     std::filesystem::path path() {
         if (m_owner == nullptr) {
-            return file_name();
+            return usable_name();
         }
 
         std::filesystem::path p{};
@@ -279,15 +276,15 @@ public:
 
         for (auto&& o : os) {
             if (o->is_a<Namespace>()) {
-                p /= o->file_name();
+                p /= o->usable_name();
             } else if (o->is_a<Struct>()) {
-                p /= o->file_name();
+                p /= o->usable_name();
                 break;
             }
         }
 
         if (m_owner->is_a<Namespace>()) {
-            p /= file_name();
+            p /= usable_name();
         }
 
         return p;
