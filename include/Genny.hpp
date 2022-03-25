@@ -832,7 +832,8 @@ protected:
         Indent _{os};
 
         for (auto&& [name, value] : m_values) {
-            os << name << " = " << value << ",\n";
+            if (!m_type || 1ull << (m_type->size() * 8) > value)
+                os << name << " = " << value << ",\n";
         }
     }
 };
