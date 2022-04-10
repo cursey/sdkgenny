@@ -842,7 +842,7 @@ class EnumClass : public Enum {
 public:
     explicit EnumClass(std::string_view name) : Enum{name} {}
 
-    void generate_forward_decl(std::ostream& os) const override { os << "enum class" << usable_name_decl() << ";\n"; }
+    void generate_forward_decl(std::ostream& os) const override { os << "enum class " << usable_name_decl() << ";\n"; }
     void generate(std::ostream& os) const override {
         os << "enum class " << usable_name_decl();
         generate_type(os);
