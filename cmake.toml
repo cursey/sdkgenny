@@ -80,3 +80,9 @@ condition = "build-examples"
 type = "executable"
 sources = ["examples/Parser.cpp"]
 link-libraries = ["sdkgenny", "taocpp::pegtl"]
+
+[target.example_generictype]
+condition = "build-examples"
+type = "executable"
+sources = ["examples/GenericType.cpp"]
+link-libraries = ["sdkgenny"]

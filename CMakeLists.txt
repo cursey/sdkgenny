@@ -417,3 +417,38 @@ if(SDKGENNY_BUILD_EXAMPLES) # build-examples
 	unset(CMKR_SOURCES)
 endif()
 
+# Target example_generictype
+if(SDKGENNY_BUILD_EXAMPLES) # build-examples
+	set(CMKR_TARGET example_generictype)
+	set(example_generictype_SOURCES "")
+
+	list(APPEND example_generictype_SOURCES
+		"examples/GenericType.cpp"
+	)
+
+	list(APPEND example_generictype_SOURCES
+		cmake.toml
+	)
+
+	set(CMKR_SOURCES ${example_generictype_SOURCES})
+	add_executable(example_generictype)
+
+	if(example_generictype_SOURCES)
+		target_sources(example_generictype PRIVATE ${example_generictype_SOURCES})
+	endif()
+
+	get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
+	if(NOT CMKR_VS_STARTUP_PROJECT)
+		set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT example_generictype)
+	endif()
+
+	source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${example_generictype_SOURCES})
+
+	target_link_libraries(example_generictype PRIVATE
+		sdkgenny
+	)
+
+	unset(CMKR_TARGET)
+	unset(CMKR_SOURCES)
+endif()
+

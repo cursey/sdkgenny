@@ -467,13 +467,33 @@ inline Array* Type::array_(size_t count) {
 
 class GenericType : public Type {
 public:
-    explicit GenericType(std::string_view name) : Type{name} {}
+    explicit GenericType(std::string_view name) : Type{name} {
+        usable_name = [this] {
+            std::string name{};
+            constexpr auto allowed_chars = "*&[]:<>, ";
+
+            for (auto&& c : m_name) {
+                if (!std::isalnum(c) && std::strchr(allowed_chars, c) == nullptr) {
+                    name += '_';
+                } else {
+                    name += c;
+                }
+            }
+
+            if (!name.empty() && isdigit(name[0])) {
+                name = "_" + name;
+            }
+
+            return name;
+        };
+    }
 
     auto template_types() const { return m_template_types; }
     auto template_type(Type* type) {
         m_template_types.emplace(type);
         return this;
     }
+
 
 protected:
     std::unordered_set<Type*> m_template_types{};
@@ -956,9 +976,14 @@ public:
                 }
             }
         };
-        auto add_dep = [&](Object* obj) {
-            while (auto arr = dynamic_cast<Array*>(obj)) {
-                obj = arr->of();
+        std::function<void(Object*)> add_dep = [&](Object* obj) {
+            if (auto arr = dynamic_cast<Array*>(obj)) {
+                return add_dep(arr->of());
+            }
+            else if (auto gt = dynamic_cast<GenericType*>(obj)) {
+                for (auto&& type : gt->template_types()) {
+                    add_dep(type);
+                }
             }
 
             add_hard_dep(obj);
