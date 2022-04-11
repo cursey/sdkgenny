@@ -292,6 +292,9 @@ public:
         return p;
     }
 
+    auto skip_generation(bool g) { m_skip_generation = g; return this; }
+    auto skip_generation() { return m_skip_generation; }
+
 protected:
     friend class Type;
     friend class Pointer;
@@ -303,6 +306,8 @@ protected:
     std::string m_name{};
     std::vector<std::unique_ptr<Object>> m_children{};
     std::vector<std::string> m_metadata{};
+
+    bool m_skip_generation{};
 };
 
 template <typename T> T* cast(const Object* object) {
@@ -1428,6 +1433,10 @@ protected:
     bool m_generate_namespaces{true};
 
     template <typename T> void generate_header(const std::filesystem::path& sdk_path, T* obj) const {
+        if (obj->skip_generation()) {
+            return;
+        }
+
         auto obj_inc_path = sdk_path / (obj->path() += m_header_extension);
         std::ofstream file_list{sdk_path / "file_list.txt", std::ios::app};
         file_list << "\"" << obj_inc_path.string() << "\" \\\n";
@@ -1546,6 +1555,10 @@ protected:
     }
 
     template <typename T> void generate_source(const std::filesystem::path& sdk_path, T* obj) const {
+        if (obj->skip_generation()) {
+            return;
+        }
+
         // Skip generating a source file for an object with no functions.
         if (!obj->has_any<Function>()) {
             return;
