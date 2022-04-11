@@ -247,7 +247,7 @@ public:
         std::string name{};
 
         for (auto&& c : m_name) {
-            if (c == ' ') {
+            if (!std::isalnum(c)) {
                 name += '_';
             } else {
                 name += c;
