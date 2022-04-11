@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <cassert>
 #include <climits>
+#include <cstring>
 #include <filesystem>
 #include <fstream>
 #include <functional>
@@ -245,9 +246,10 @@ public:
     // necessary.
     std::function<std::string()> usable_name = [this] {
         std::string name{};
+        constexpr auto allowed_chars = "*&[]:";
 
         for (auto&& c : m_name) {
-            if (!std::isalnum(c)) {
+            if (!std::isalnum(c) && std::strchr(allowed_chars, c) == nullptr) {
                 name += '_';
             } else {
                 name += c;
