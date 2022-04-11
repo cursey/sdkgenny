@@ -20,9 +20,10 @@ int main(int argc, char* argv[]) {
     auto qux = g->class_("Qux");
     qux->variable("baz")->type(baz)->append();
 
-    std::cout << "Hello ";
+    auto quux = g->class_("Quux");
+    quux->function("hello")->param("name")->type(baz->ref());
+
     sdk.generate(std::filesystem::current_path() / "generic_type_sdk");
-    std::cout << "World" << std::endl;
 
     return 0;
 }
