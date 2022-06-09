@@ -9,7 +9,7 @@ SDKGENNY_BUILD_EXAMPLES = false
 build-examples = "SDKGENNY_BUILD_EXAMPLES"
 
 [vcpkg]
-version = "2021.12.01"
+version = "2022.05.10"
 packages = ["pegtl"]
 
 [find-package]
