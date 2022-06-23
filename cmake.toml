@@ -86,3 +86,9 @@ condition = "build-examples"
 type = "executable"
 sources = ["examples/GenericType.cpp"]
 link-libraries = ["sdkgenny"]
+
+[target.example_childstruct]
+condition = "build-examples"
+type = "executable"
+sources = ["examples/ChildStruct.cpp"]
+link-libraries = ["sdkgenny"]

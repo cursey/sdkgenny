@@ -455,3 +455,38 @@ if(SDKGENNY_BUILD_EXAMPLES) # build-examples
 	unset(CMKR_SOURCES)
 endif()
 
+# Target example_childstruct
+if(SDKGENNY_BUILD_EXAMPLES) # build-examples
+	set(CMKR_TARGET example_childstruct)
+	set(example_childstruct_SOURCES "")
+
+	list(APPEND example_childstruct_SOURCES
+		"examples/ChildStruct.cpp"
+	)
+
+	list(APPEND example_childstruct_SOURCES
+		cmake.toml
+	)
+
+	set(CMKR_SOURCES ${example_childstruct_SOURCES})
+	add_executable(example_childstruct)
+
+	if(example_childstruct_SOURCES)
+		target_sources(example_childstruct PRIVATE ${example_childstruct_SOURCES})
+	endif()
+
+	get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
+	if(NOT CMKR_VS_STARTUP_PROJECT)
+		set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT example_childstruct)
+	endif()
+
+	source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${example_childstruct_SOURCES})
+
+	target_link_libraries(example_childstruct PRIVATE
+		sdkgenny
+	)
+
+	unset(CMKR_TARGET)
+	unset(CMKR_SOURCES)
+endif()
+

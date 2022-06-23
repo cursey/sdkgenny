@@ -292,7 +292,10 @@ public:
         return p;
     }
 
-    auto skip_generation(bool g) { m_skip_generation = g; return this; }
+    auto skip_generation(bool g) {
+        m_skip_generation = g;
+        return this;
+    }
     auto skip_generation() { return m_skip_generation; }
 
 protected:
@@ -498,7 +501,6 @@ public:
         m_template_types.emplace(type);
         return this;
     }
-
 
 protected:
     std::unordered_set<Type*> m_template_types{};
@@ -967,23 +969,35 @@ public:
         Dependencies deps{};
 
         std::function<void(Object*)> add_dep{};
-        auto add_hard_dep = [&](Object* obj) {
-            if (obj != nullptr && obj != this && !obj->is_child_of(this) &&
-                (obj->is_a<Struct>() || obj->is_a<Enum>())) {
+        std::function<void(Object*)> add_hard_dep = [&](Object* obj) {
+            if (obj == nullptr || obj == this || obj->is_child_of(this)) {
+                return;
+            }
+
+            if (auto parent = obj->direct_owner(); parent != nullptr && parent->is_a<Struct>()) {
+                // Structs declared within structs need their parent struct to be a hard dependency.
+                add_hard_dep(parent);
+            } else if (obj->is_a<Struct>() || obj->is_a<Enum>()) {
                 deps.hard.emplace(dynamic_cast<Type*>(obj));
             }
         };
         std::function<void(Object*)> add_soft_dep = [&](Object* obj) {
+            if (obj == nullptr || obj == this || obj->is_child_of(this)) {
+                return;
+            }
+
             if (auto ref = dynamic_cast<Reference*>(obj)) {
                 add_soft_dep(ref->to());
-            } else if (obj != nullptr && obj != this && !obj->is_child_of(this) &&
-                                        (obj->is_a<Struct>() || obj->is_a<Enum>() || obj->is_a<GenericType>())) {
+            } else if (obj->is_a<Struct>() || obj->is_a<Enum>() || obj->is_a<GenericType>()) {
                 if (obj->is_a<Enum>()) {
                     // Enums are always hard dependencies.
                     add_hard_dep(obj);
                 } else if (obj->is_a<GenericType>()) {
                     // GenericTypes may have hard or soft dependencies as template types.
                     add_dep(obj);
+                } else if (auto parent = obj->direct_owner(); parent != nullptr && parent->is_a<Struct>()) {
+                    // Structs declared within structs need their parent struct to be a hard dependency.
+                    add_hard_dep(parent);
                 } else {
                     deps.soft.emplace(dynamic_cast<Type*>(obj));
                 }
@@ -992,8 +1006,7 @@ public:
         add_dep = [&](Object* obj) {
             if (auto arr = dynamic_cast<Array*>(obj)) {
                 add_dep(arr->of());
-            }
-            else if (auto gt = dynamic_cast<GenericType*>(obj)) {
+            } else if (auto gt = dynamic_cast<GenericType*>(obj)) {
                 for (auto&& type : gt->template_types()) {
                     add_dep(type);
                 }
