@@ -161,7 +161,7 @@ public:
     }
 
     template <typename T> bool has_any() const {
-        return std::any_of(m_children.cbegin(), m_children.cend(), [](const auto& child) { return child->is_a<T>(); });
+        return std::any_of(m_children.cbegin(), m_children.cend(), [](const auto& child) { return child->template is_a<T>(); });
     }
 
     template <typename T> bool has_any_in_children() const {
@@ -1536,7 +1536,7 @@ protected:
             }
         }
 
-        auto owners = obj->owners<Namespace>();
+        auto owners = obj->template owners<Namespace>();
 
         if (owners.size() > 1 && m_generate_namespaces) {
             std::reverse(owners.begin(), owners.end());
@@ -1582,13 +1582,13 @@ protected:
         }
 
         // Skip generating a source file for an object with no functions.
-        if (!obj->has_any<Function>()) {
+        if (!obj->template has_any<Function>()) {
             return;
         }
 
         // Skip generating a source file for an object if all the functions it does have lack a procedure.
         std::unordered_set<Function*> functions{};
-        obj->get_all_in_children<Function>(functions);
+        obj->template get_all_in_children<Function>(functions);
 
         auto any_procedure = false;
 
