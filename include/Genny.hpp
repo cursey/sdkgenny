@@ -34,6 +34,7 @@ class Class;
 class Enum;
 class Variable;
 class Function;
+class Namespace;
 
 class Indent : public std::streambuf {
 public:
@@ -166,7 +167,7 @@ public:
 
     template <typename T> bool has_any_in_children() const {
         return std::any_of(m_children.cbegin(), m_children.cend(),
-            [](const auto& child) { return child->is_a<T>() || child->has_any_in_children<T>(); });
+            [](const auto& child) { return child->template is_a<T>() || child->template has_any_in_children<T>(); });
     }
 
     template <typename T> bool is_child_of(T* obj) const {
@@ -277,7 +278,7 @@ public:
         std::reverse(os.begin(), os.end());
 
         for (auto&& o : os) {
-            if (o->is_a<Namespace>()) {
+            if (o->template is_a<Namespace>()) {
                 p /= o->usable_name();
             } else if (o->is_a<Struct>()) {
                 p /= o->usable_name();
@@ -285,7 +286,7 @@ public:
             }
         }
 
-        if (m_owner->is_a<Namespace>()) {
+        if (m_owner->template is_a<Namespace>()) {
             p /= usable_name();
         }
 
