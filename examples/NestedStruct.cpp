@@ -9,12 +9,18 @@ int main(int argc, char* argv[]) {
     s.parents.push_back(sdk.global_ns());
 
     tao::pegtl::string_input in{
-        R"(
+        /*R"(
             namespace foo {
                 struct bar {
                     struct baz {}
                 }
             }
+        )"*/
+        R"(
+            struct foo {
+                struct bar* bar
+            }
+
         )"
         , ""};
 

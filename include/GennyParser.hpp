@@ -56,8 +56,8 @@ struct EnumId : TAO_PEGTL_STRING("enum") {};
 struct EnumClassId : TAO_PEGTL_STRING("class") {};
 struct EnumName : identifier {};
 struct EnumType : identifier {};
-struct EnumDecl : if_must<EnumId, Seps, opt<EnumClassId>, Seps, EnumName, Seps, opt<one<':'>, Seps, EnumType>> {};
-struct EnumExpr : if_must<EnumDecl, Seps, one<'{'>, Seps, EnumVals, Seps, one<'}'>, Endl> {};
+struct EnumDecl : seq<EnumId, Seps, opt<EnumClassId>, Seps, EnumName, Seps, opt<one<':'>, Seps, EnumType>, Seps, one<'{'>> {};
+struct EnumExpr : if_must<EnumDecl, Seps, EnumVals, Seps, one<'}'>, Endl> {};
 
 struct StructPrivacyId : sor<TAO_PEGTL_STRING("public"), TAO_PEGTL_STRING("private"), TAO_PEGTL_STRING("protected")> {};
 struct StructId : sor<TAO_PEGTL_STRING("struct"), TAO_PEGTL_STRING("class")> {};
@@ -67,13 +67,13 @@ struct StructParent : seq<opt<disable<StructPrivacyId>>, Seps, list_must<StructP
 struct StructParentList : list<StructParent, one<','>, Sep> {};
 struct StructParentListDecl : seq<one<':'>, Seps, StructParentList> {};
 struct StructSize : Num {};
-struct StructDecl : if_must<StructId, Seps, StructName, Seps, opt<StructParentListDecl>, Seps, opt<StructSize>> {};
+struct StructDecl : seq<StructId, Seps, StructName, Seps, opt<StructParentListDecl>, Seps, opt<StructSize>, Seps, one<'{'>> {};
 struct StructPrivacyDecl : disable<StructPrivacyId, Seps, one<':'>> {};
 struct StructExpr;
 struct FnDecl;
 struct VarDecl;
 struct StructExprs : list<sor<StructPrivacyDecl, EnumExpr, StructExpr, FnDecl, VarDecl>, Seps> {};
-struct StructExpr : if_must<StructDecl, Seps, one<'{'>, Seps, opt<StructExprs>, Seps, one<'}'>, Endl> {};
+struct StructExpr : if_must<StructDecl, Seps, opt<StructExprs>, Seps, one<'}'>, Endl> {};
 
 struct VarTypeNamePart : identifier {};
 struct VarTypeName : list_must<VarTypeNamePart, one<'.'>> {};
