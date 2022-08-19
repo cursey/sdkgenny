@@ -92,3 +92,9 @@ condition = "build-examples"
 type = "executable"
 sources = ["examples/ChildStruct.cpp"]
 link-libraries = ["sdkgenny"]
+
+[target.example_nestedstruct]
+condition = "build-examples"
+type = "executable"
+sources = ["examples/NestedStruct.cpp"]
+link-libraries = ["sdkgenny", "taocpp::pegtl"]

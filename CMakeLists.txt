@@ -490,3 +490,39 @@ if(SDKGENNY_BUILD_EXAMPLES) # build-examples
 	unset(CMKR_SOURCES)
 endif()
 
+# Target example_nestedstruct
+if(SDKGENNY_BUILD_EXAMPLES) # build-examples
+	set(CMKR_TARGET example_nestedstruct)
+	set(example_nestedstruct_SOURCES "")
+
+	list(APPEND example_nestedstruct_SOURCES
+		"examples/NestedStruct.cpp"
+	)
+
+	list(APPEND example_nestedstruct_SOURCES
+		cmake.toml
+	)
+
+	set(CMKR_SOURCES ${example_nestedstruct_SOURCES})
+	add_executable(example_nestedstruct)
+
+	if(example_nestedstruct_SOURCES)
+		target_sources(example_nestedstruct PRIVATE ${example_nestedstruct_SOURCES})
+	endif()
+
+	get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
+	if(NOT CMKR_VS_STARTUP_PROJECT)
+		set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT example_nestedstruct)
+	endif()
+
+	source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${example_nestedstruct_SOURCES})
+
+	target_link_libraries(example_nestedstruct PRIVATE
+		sdkgenny
+		taocpp::pegtl
+	)
+
+	unset(CMKR_TARGET)
+	unset(CMKR_SOURCES)
+endif()
+

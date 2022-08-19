@@ -72,7 +72,7 @@ struct StructPrivacyDecl : disable<StructPrivacyId, Seps, one<':'>> {};
 struct StructExpr;
 struct FnDecl;
 struct VarDecl;
-struct StructExprs : list<sor<StructPrivacyDecl, FnDecl, VarDecl, EnumExpr, StructExpr>, Seps> {};
+struct StructExprs : list<sor<StructPrivacyDecl, EnumExpr, StructExpr, FnDecl, VarDecl>, Seps> {};
 struct StructExpr : if_must<StructDecl, Seps, one<'{'>, Seps, opt<StructExprs>, Seps, one<'}'>, Endl> {};
 
 struct VarTypeNamePart : identifier {};
