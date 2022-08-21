@@ -50,19 +50,72 @@ find_package(pegtl)
 set(CMKR_TARGET sdkgenny)
 set(sdkgenny_SOURCES "")
 
+list(APPEND sdkgenny_SOURCES
+	"src/Array.cpp"
+	"src/Class.cpp"
+	"src/Constant.cpp"
+	"src/Enum.cpp"
+	"src/EnumClass.cpp"
+	"src/Function.cpp"
+	"src/GenericType.cpp"
+	"src/Namespace.cpp"
+	"src/Object.cpp"
+	"src/Parameter.cpp"
+	"src/Pointer.cpp"
+	"src/Reference.cpp"
+	"src/Sdk.cpp"
+	"src/StaticFunction.cpp"
+	"src/Struct.cpp"
+	"src/Type.cpp"
+	"src/Typename.cpp"
+	"src/Variable.cpp"
+	"src/VirtualFunction.cpp"
+	"src/detail/Indent.cpp"
+	"include/Genny.hpp"
+	"include/GennyIda.hpp"
+	"include/GennyMonolith.hpp"
+	"include/GennyParser.hpp"
+	"include/sdkgenny/Array.hpp"
+	"include/sdkgenny/Class.hpp"
+	"include/sdkgenny/Constant.hpp"
+	"include/sdkgenny/Enum.hpp"
+	"include/sdkgenny/EnumClass.hpp"
+	"include/sdkgenny/Function.hpp"
+	"include/sdkgenny/GenericType.hpp"
+	"include/sdkgenny/Namespace.hpp"
+	"include/sdkgenny/Object.hpp"
+	"include/sdkgenny/Parameter.hpp"
+	"include/sdkgenny/Pointer.hpp"
+	"include/sdkgenny/Reference.hpp"
+	"include/sdkgenny/Sdk.hpp"
+	"include/sdkgenny/StaticFunction.hpp"
+	"include/sdkgenny/Struct.hpp"
+	"include/sdkgenny/Type.hpp"
+	"include/sdkgenny/Typename.hpp"
+	"include/sdkgenny/Variable.hpp"
+	"include/sdkgenny/VirtualFunction.hpp"
+	"include/sdkgenny/detail/Indent.hpp"
+)
+
+list(APPEND sdkgenny_SOURCES
+	cmake.toml
+)
+
 set(CMKR_SOURCES ${sdkgenny_SOURCES})
-add_library(sdkgenny INTERFACE)
+add_library(sdkgenny STATIC)
 
 if(sdkgenny_SOURCES)
-	target_sources(sdkgenny INTERFACE ${sdkgenny_SOURCES})
+	target_sources(sdkgenny PRIVATE ${sdkgenny_SOURCES})
 endif()
 
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${sdkgenny_SOURCES})
+
 add_library(sdkgenny::sdkgenny ALIAS sdkgenny)
-target_compile_features(sdkgenny INTERFACE
+target_compile_features(sdkgenny PUBLIC
 	cxx_std_17
 )
 
-target_include_directories(sdkgenny INTERFACE
+target_include_directories(sdkgenny PUBLIC
 	"include/"
 )
 

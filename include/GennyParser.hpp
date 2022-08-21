@@ -6,6 +6,7 @@
 
 #include <cstdlib>
 #include <optional>
+#include <stack>
 
 #include <tao/pegtl.hpp>
 
@@ -56,7 +57,8 @@ struct EnumId : TAO_PEGTL_STRING("enum") {};
 struct EnumClassId : TAO_PEGTL_STRING("class") {};
 struct EnumName : identifier {};
 struct EnumType : identifier {};
-struct EnumDecl : seq<EnumId, Seps, opt<EnumClassId>, Seps, EnumName, Seps, opt<one<':'>, Seps, EnumType>, Seps, one<'{'>> {};
+struct EnumDecl
+    : seq<EnumId, Seps, opt<EnumClassId>, Seps, EnumName, Seps, opt<one<':'>, Seps, EnumType>, Seps, one<'{'>> {};
 struct EnumExpr : if_must<EnumDecl, Seps, EnumVals, Seps, one<'}'>, Endl> {};
 
 struct StructPrivacyId : sor<TAO_PEGTL_STRING("public"), TAO_PEGTL_STRING("private"), TAO_PEGTL_STRING("protected")> {};
@@ -67,7 +69,8 @@ struct StructParent : seq<opt<disable<StructPrivacyId>>, Seps, list_must<StructP
 struct StructParentList : list<StructParent, one<','>, Sep> {};
 struct StructParentListDecl : seq<one<':'>, Seps, StructParentList> {};
 struct StructSize : Num {};
-struct StructDecl : seq<StructId, Seps, StructName, Seps, opt<StructParentListDecl>, Seps, opt<StructSize>, Seps, one<'{'>> {};
+struct StructDecl
+    : seq<StructId, Seps, StructName, Seps, opt<StructParentListDecl>, Seps, opt<StructSize>, Seps, one<'{'>> {};
 struct StructPrivacyDecl : disable<StructPrivacyId, Seps, one<':'>> {};
 struct StructExpr;
 struct FnDecl;

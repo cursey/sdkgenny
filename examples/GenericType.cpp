@@ -1,5 +1,5 @@
-#include <iostream>
 #include <Genny.hpp>
+#include <iostream>
 
 int main(int argc, char* argv[]) {
     genny::Sdk sdk{};
