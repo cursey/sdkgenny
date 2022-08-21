@@ -1,10 +1,10 @@
 # SdkGenny
 
-SdkGenny is a header-only framework for generating C++ compatible SDKs for third party applications.
+SdkGenny is a framework for generating C++ compatible SDKs for third party applications.
 
 ## Installation
 
-Copy `Genny.hpp` from the `include/` directory into your project and `#include` it when you want to use it.
+This project uses CMake. Just get the `include/` and `src/` dirs integrated into your project in some way. The only dependency is on `PEGTL` which is only necessary if you're using the included parser.
 
 ## Usage
 Here is a short example of how to use SdkGenny. This does not showcase every feature. For more examples check the `examples/` directory.
