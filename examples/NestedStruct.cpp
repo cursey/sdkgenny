@@ -8,21 +8,20 @@ int main(int argc, char* argv[]) {
     genny::parser::State s{};
     s.parents.push_back(sdk.global_ns());
 
-    tao::pegtl::string_input in{
-        /*R"(
-            namespace foo {
-                struct bar {
-                    struct baz {}
-                }
-            }
-        )"*/
+    tao::pegtl::string_input in{/*R"(
+                                    namespace foo {
+                                        struct bar {
+                                            struct baz {}
+                                        }
+                                    }
+                                )"*/
         R"(
             struct foo {
                 struct bar* bar
             }
 
-        )"
-        , ""};
+        )",
+        ""};
 
     try {
         tao::pegtl::parse<genny::parser::Grammar, genny::parser::Action>(in, s);

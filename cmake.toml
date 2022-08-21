@@ -16,7 +16,9 @@ packages = ["pegtl"]
 pegtl = { required = false }
 
 [target.sdkgenny]
-type = "interface"
+type = "static"
+headers = ["include/**.hpp"]
+sources = ["src/**.cpp"]
 include-directories = ["include/"]
 compile-features = ["cxx_std_17"]
 alias = "sdkgenny::sdkgenny"
