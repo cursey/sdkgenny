@@ -1,6 +1,6 @@
 # SdkGenny
 
-SdkGenny is a framework for generating C++ compatible SDKs for third party applications.
+SdkGenny is a library for generating C++ compatible SDKs for third party applications.
 
 ## Installation
 
