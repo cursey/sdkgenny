@@ -57,11 +57,6 @@ public:
 
     Dependencies dependencies();
 
-protected:
-    std::vector<Struct*> m_parents{};
-
-    int vtable_size() const;
-
     template <typename T> T* find_in_parents(std::string_view name) {
         for (auto&& parent : m_parents) {
             if (auto obj = parent->find<T>(name)) {
@@ -71,6 +66,11 @@ protected:
 
         return nullptr;
     }
+
+protected:
+    std::vector<Struct*> m_parents{};
+
+    int vtable_size() const;
 
     template <typename T, typename... TArgs> T* find_or_add_unique(std::string_view name, TArgs... args) {
         if (auto search = find<T>(name); search != nullptr) {
