@@ -354,6 +354,8 @@ template <> struct Action<EnumExpr> {
             enum_->value(name, val);
         }
 
+        enum_->type(s.lookup<Type>({s.enum_type}));
+
         s.enum_vals.clear();
         s.enum_name.clear();
         s.enum_type.clear();

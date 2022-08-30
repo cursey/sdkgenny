@@ -283,6 +283,22 @@ struct TA : Student, Faculty {
 }
 )";
 
+constexpr auto g_enum_with_type = R"(
+type byte 1 [[u8]]
+
+enum Place : byte {
+    EARTH = 0,
+    MOON = 1,
+    MARS = 2,
+}
+
+enum class Color : byte {
+    RED = 0,
+    BLUE = 1,
+    GREEN = 2, 
+}
+)";
+
 namespace pegtl = tao::pegtl;
 
 int main(int argc, char* argv[]) {
@@ -306,6 +322,7 @@ int main(int argc, char* argv[]) {
     // pegtl::string_input in{g_fwd_decl_members, "fwd_decl_members"};
     // pegtl::string_input in{g_reclass, "reclass"};
     // pegtl::string_input in{g_multiple_inheritance, "multiple_inheritance"};
+    // pegtl::string_input in{g_enum_with_type, "enum_with_type"};
 
     try {
         auto r = pegtl::parse<genny::parser::Grammar, genny::parser::Action>(in, s);
