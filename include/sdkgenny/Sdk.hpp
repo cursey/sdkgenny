@@ -16,9 +16,9 @@
 #include "VirtualFunction.hpp"
 
 namespace sdkgenny {
-class Sdk {
+class Sdk : public Object {
 public:
-    Sdk() = default;
+    Sdk();
     virtual ~Sdk() = default;
 
     auto global_ns() const { return m_global_ns.get(); }
@@ -61,12 +61,21 @@ public:
         return this;
     }
 
+    // These are intended to be used by either the genny parser or tooling such
+    // as ReGenny.
+    const auto& imports() const { return m_imports; }
+    auto import(std::filesystem::path filepath) {
+        m_imports.emplace(filepath);
+        return this;
+    }
+
 protected:
     std::unique_ptr<Namespace> m_global_ns{std::make_unique<Namespace>("")};
     std::string m_preamble{};
     std::string m_postamble{};
     std::set<std::string> m_includes{};
     std::set<std::string> m_local_includes{};
+    std::set<std::filesystem::path> m_imports{};
     std::string m_header_extension{".hpp"};
     std::string m_source_extension{".cpp"};
     bool m_generate_namespaces{true};

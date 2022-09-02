@@ -190,7 +190,10 @@ struct Vec3i {
 )";
 
 constexpr auto g_include = R"(
-#include "types.genny"
+#include <cstdint>
+#include "cool_thing.hpp"
+
+import "types.genny"
 
 struct Vec3f {
     float x

@@ -1,6 +1,10 @@
 #include "sdkgenny/Sdk.hpp"
 
 namespace sdkgenny {
+Sdk::Sdk() : Object{"Sdk"} {
+    m_global_ns->m_owner = this;
+}
+
 void Sdk::generate(const std::filesystem::path& sdk_path) const {
     // erase the file_list.txt
     std::filesystem::remove(sdk_path / "file_list.txt");

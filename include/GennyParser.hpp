@@ -31,8 +31,14 @@ struct Metadata : plus<not_one<',', ']'>> {};
 struct MetadataDecl : if_must<two<'['>, Seps, list<Metadata, one<','>, Sep>, Seps, two<']'>> {};
 
 struct IncludeId : TAO_PEGTL_STRING("#include") {};
-struct IncludePath : plus<not_one<'"'>> {};
-struct IncludeDecl : if_must<IncludeId, Seps, one<'"'>, IncludePath, one<'"'>> {};
+struct IncludePath : plus<not_one<'"', '>'>> {};
+struct IncludeLocalPath : seq<one<'"'>, IncludePath, one<'"'>> {};
+struct IncludeGlobalPath : seq<one<'<'>, IncludePath, one<'>'>> {};
+struct IncludeDecl : if_must<IncludeId, Seps, sor<IncludeLocalPath, IncludeGlobalPath>, Endl> {};
+
+struct ImportId : TAO_PEGTL_STRING("import") {};
+struct ImportPath : plus<not_one<'"'>> {};
+struct ImportDecl : if_must<ImportId, Seps, one<'"'>, ImportPath, one<'"'>, Endl> {};
 
 struct NsId : TAO_PEGTL_STRING("namespace") {};
 struct NsName : identifier {};
@@ -115,7 +121,7 @@ struct FnDecl : seq<opt<FnPrefix>, Seps, FnRet, Seps, FnName, Seps, FnParams, Se
 
 struct StaticAssert : disable<TAO_PEGTL_STRING("static_assert"), until<one<';'>>> {};
 
-struct Decl : sor<IncludeDecl, TypeDecl, NsExpr, EnumExpr, StructExpr, StaticAssert> {};
+struct Decl : sor<IncludeDecl, ImportDecl, TypeDecl, NsExpr, EnumExpr, StructExpr, StaticAssert> {};
 struct Grammar : until<eof, sor<eol, Sep, Decl>> {};
 
 struct State {
@@ -127,6 +133,9 @@ struct State {
     std::vector<std::string> metadata{};
 
     std::string include_path{};
+    bool include_local{};
+    
+    std::string import_path{};
 
     std::vector<std::string> ns_parts{};
     std::vector<std::string> ns{};
@@ -224,24 +233,51 @@ template <> struct Action<IncludePath> {
     template <typename Input> static void apply(const Input& in, State& s) { s.include_path = in.string_view(); }
 };
 
+template <> struct Action<IncludeLocalPath> {
+    template <typename Input> static void apply(const Input& in, State& s) { s.include_local = true; }
+};
+
+template <> struct Action<IncludeGlobalPath> {
+    template <typename Input> static void apply(const Input& in, State& s) { s.include_local = false; }
+};
+
 template <> struct Action<IncludeDecl> {
+    template <typename Input> static void apply(const Input& in, State& s) {
+        if (s.include_local) {
+            s.parents.front()->owner<Sdk>()->include_local(s.include_path);
+        } else {
+            s.parents.front()->owner<Sdk>()->include(s.include_path);
+        }
+
+        s.include_path.clear();
+        s.include_local = false;
+    }
+};
+
+template <> struct Action<ImportPath> {
+    template <typename Input> static void apply(const Input& in, State& s) { s.import_path = in.string_view(); }
+};
+
+template <> struct Action<ImportDecl> {
     template <typename Input> static void apply(const Input& in, State& s) {
         auto backup_filepath = s.filepath;
 
         try {
             auto newstate = std::make_unique<State>();
-            auto include_path = std::move(s.include_path);
-            newstate->filepath = (s.filepath.has_extension() ? s.filepath.parent_path() : s.filepath) / include_path;
+            auto import_path = std::move(s.import_path);
+            newstate->filepath = (s.filepath.has_extension() ? s.filepath.parent_path() : s.filepath) / import_path;
             newstate->parents.push_back(s.parents.front());
             file_input f{newstate->filepath};
 
-            if (!parse<genny::parser::Grammar, genny::parser::Action>(f, *newstate)) {
-                throw parse_error{"Failed to parse file '" + include_path + "'", in};
+            if (!parse<Grammar, Action>(f, *newstate)) {
+                throw parse_error{"Failed to parse file '" + import_path + "'", in};
             }
+
+            s.parents.front()->owner<Sdk>()->import(newstate->filepath);
         } catch (const parse_error& e) {
             throw e;
         } catch (const std::exception& e) {
-            throw parse_error{std::string{"Failed to include file: "} + e.what(), in};
+            throw parse_error{std::string{"Failed to import file: "} + e.what(), in};
         }
 
         s.filepath = backup_filepath;
