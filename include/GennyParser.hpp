@@ -269,7 +269,7 @@ template <> struct Action<ImportDecl> {
             newstate->parents.push_back(s.parents.front());
             file_input f{newstate->filepath};
 
-            if (!parse<Grammar, Action>(f, *newstate)) {
+            if (!parse<genny::parser::Grammar, genny::parser::Action>(f, *newstate)) {
                 throw parse_error{"Failed to parse file '" + import_path + "'", in};
             }
 
