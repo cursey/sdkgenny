@@ -16,9 +16,9 @@
 #include "VirtualFunction.hpp"
 
 namespace sdkgenny {
-class Sdk {
+class Sdk : public Object {
 public:
-    Sdk() = default;
+    Sdk();
     virtual ~Sdk() = default;
 
     auto global_ns() const { return m_global_ns.get(); }
