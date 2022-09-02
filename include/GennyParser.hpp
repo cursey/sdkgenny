@@ -272,6 +272,8 @@ template <> struct Action<ImportDecl> {
             if (!parse<Grammar, Action>(f, *newstate)) {
                 throw parse_error{"Failed to parse file '" + import_path + "'", in};
             }
+
+            s.parents.front()->owner<Sdk>()->import(newstate->filepath);
         } catch (const parse_error& e) {
             throw e;
         } catch (const std::exception& e) {
