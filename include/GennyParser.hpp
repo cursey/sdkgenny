@@ -589,9 +589,7 @@ template <> struct Action<VarDecl> {
         // Make sure the variable we're parsing isn't the same type as one of its parents.
         if (!s.cur_type->is_a<Reference>()) {
             for (auto it = s.parents.rbegin(); it != s.parents.rend(); ++it) {
-                auto obj = *it;
-
-                if (s.cur_type == obj) {
+                if (s.cur_type == *it) {
                     throw parse_error{"The variable cannot be the same type as its parent.", in};
                 }
             }
