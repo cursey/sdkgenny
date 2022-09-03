@@ -586,6 +586,15 @@ template <> struct Action<VarDecl> {
             throw parse_error{"The current type is null", in};
         }
 
+        // Make sure the variable we're parsing isn't the same type as one of its parents.
+        if (!s.cur_type->is_a<Reference>()) {
+            for (auto it = s.parents.rbegin(); it != s.parents.rend(); ++it) {
+                if (s.cur_type == *it) {
+                    throw parse_error{"The variable cannot be the same type as its parent.", in};
+                }
+            }
+        }
+
         // Reverse the order because we want to adhear to how multi-dimensional arrays are declared in C/C++.
         std::reverse(s.var_type_array_counts.begin(), s.var_type_array_counts.end());
 
