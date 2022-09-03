@@ -260,12 +260,25 @@ template <> struct Action<ImportPath> {
 
 template <> struct Action<ImportDecl> {
     template <typename Input> static void apply(const Input& in, State& s) {
+        auto import_path = std::move(s.import_path);
+        auto filepath = (s.filepath.has_extension() ? s.filepath.parent_path() : s.filepath) / import_path;
+
+        if (!filepath.is_absolute()) {
+            filepath = std::filesystem::absolute(filepath);
+        }
+
+        // Return early if we've already imported this file.
+        auto& imports = s.parents.front()->owner<Sdk>()->imports();
+
+        if (imports.find(filepath) != imports.end()) {
+            return;
+        }
+
         auto backup_filepath = s.filepath;
 
         try {
             auto newstate = std::make_unique<State>();
-            auto import_path = std::move(s.import_path);
-            newstate->filepath = (s.filepath.has_extension() ? s.filepath.parent_path() : s.filepath) / import_path;
+            newstate->filepath = filepath;
             newstate->parents.push_back(s.parents.front());
             file_input f{newstate->filepath};
 
