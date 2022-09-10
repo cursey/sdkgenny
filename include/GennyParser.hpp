@@ -134,7 +134,7 @@ struct State {
 
     std::string include_path{};
     bool include_local{};
-    
+
     std::string import_path{};
 
     std::vector<std::string> ns_parts{};
