@@ -8,6 +8,7 @@ class Enum;
 class EnumClass;
 class GenericType;
 class Struct;
+class Type;
 
 class Namespace : public Typename {
 public:
