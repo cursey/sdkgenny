@@ -1,3 +1,5 @@
+#include <climits>
+
 #include "sdkgenny/Struct.hpp"
 
 #include "sdkgenny/Variable.hpp"

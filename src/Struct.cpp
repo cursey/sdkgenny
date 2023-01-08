@@ -1,3 +1,5 @@
+#include <climits>
+
 #include "sdkgenny/Array.hpp"
 #include "sdkgenny/Class.hpp"
 #include "sdkgenny/Constant.hpp"
