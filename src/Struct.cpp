@@ -1,4 +1,5 @@
 #include <climits>
+#include <unordered_map>
 
 #include "sdkgenny/Array.hpp"
 #include "sdkgenny/Class.hpp"
