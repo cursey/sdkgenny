@@ -171,7 +171,9 @@ public:
         constexpr auto allowed_chars = "*&[]:";
 
         for (auto&& c : m_name) {
-            if (!std::isalnum(c) && std::strchr(allowed_chars, c) == nullptr) {
+            auto cc = static_cast<unsigned char>(c);
+
+            if (!std::isalnum(cc) && std::strchr(allowed_chars, cc) == nullptr) {
                 name += '_';
             } else {
                 name += c;
