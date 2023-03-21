@@ -1,0 +1,21 @@
+#pragma once
+
+#include <sdkgenny/array.hpp>
+#include <sdkgenny/class.hpp>
+#include <sdkgenny/constant.hpp>
+#include <sdkgenny/enum.hpp>
+#include <sdkgenny/enum_class.hpp>
+#include <sdkgenny/function.hpp>
+#include <sdkgenny/generic_type.hpp>
+#include <sdkgenny/namespace.hpp>
+#include <sdkgenny/object.hpp>
+#include <sdkgenny/parameter.hpp>
+#include <sdkgenny/pointer.hpp>
+#include <sdkgenny/reference.hpp>
+#include <sdkgenny/sdk.hpp>
+#include <sdkgenny/static_function.hpp>
+#include <sdkgenny/struct.hpp>
+#include <sdkgenny/type.hpp>
+#include <sdkgenny/typename.hpp>
+#include <sdkgenny/variable.hpp>
+#include <sdkgenny/virtual_function.hpp>
