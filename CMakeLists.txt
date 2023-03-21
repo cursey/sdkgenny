@@ -7,12 +7,11 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR)
 	message(FATAL_ERROR "In-tree builds are not supported. Run CMake from a separate directory: cmake -B build")
 endif()
 
-# Regenerate CMakeLists.txt automatically in the root project
 set(CMKR_ROOT_PROJECT OFF)
 if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
 	set(CMKR_ROOT_PROJECT ON)
 
-	# Bootstrap cmkr
+	# Bootstrap cmkr and automatically regenerate CMakeLists.txt
 	include(cmkr.cmake OPTIONAL RESULT_VARIABLE CMKR_INCLUDE_RESULT)
 	if(CMKR_INCLUDE_RESULT)
 		cmkr()
@@ -20,94 +19,83 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
 
 	# Enable folder support
 	set_property(GLOBAL PROPERTY USE_FOLDERS ON)
-endif()
 
-# Create a configure-time dependency on cmake.toml to improve IDE support
-if(CMKR_ROOT_PROJECT)
+	# Create a configure-time dependency on cmake.toml to improve IDE support
 	configure_file(cmake.toml cmake.toml COPYONLY)
 endif()
 
 # Options
 option(SDKGENNY_BUILD_EXAMPLES "" OFF)
+option(SDKGENNY_BUILD_PARSER "" OFF)
 
 project(sdkgenny)
 
-if(CMKR_ROOT_PROJECT AND NOT CMKR_DISABLE_VCPKG)
-	include(FetchContent)
-	message(STATUS "Fetching vcpkg (2022.05.10)...")
-	FetchContent_Declare(vcpkg URL "https://github.com/microsoft/vcpkg/archive/refs/tags/2022.05.10.tar.gz")
-	FetchContent_GetProperties(vcpkg)
-	if(NOT vcpkg_POPULATED)
-		FetchContent_Populate(vcpkg)
-		include("${vcpkg_SOURCE_DIR}/scripts/buildsystems/vcpkg.cmake")
-	endif()
+include(FetchContent)
+
+if(SDKGENNY_BUILD_PARSER) # build-parser
+	message(STATUS "Fetching PEGTL (3.2.7)...")
+	FetchContent_Declare(PEGTL
+		GIT_REPOSITORY
+			"https://github.com/taocpp/PEGTL.git"
+		GIT_TAG
+			3.2.7
+		GIT_SHALLOW
+			ON
+	)
+	FetchContent_MakeAvailable(PEGTL)
+
 endif()
-
-# Packages
-find_package(pegtl)
-
-# Target sdkgenny
-set(CMKR_TARGET sdkgenny)
-set(sdkgenny_SOURCES "")
-
-list(APPEND sdkgenny_SOURCES
-	"src/Array.cpp"
-	"src/Class.cpp"
-	"src/Constant.cpp"
-	"src/Enum.cpp"
-	"src/EnumClass.cpp"
-	"src/Function.cpp"
-	"src/GenericType.cpp"
-	"src/Namespace.cpp"
-	"src/Object.cpp"
-	"src/Parameter.cpp"
-	"src/Pointer.cpp"
-	"src/Reference.cpp"
-	"src/Sdk.cpp"
-	"src/StaticFunction.cpp"
-	"src/Struct.cpp"
-	"src/Type.cpp"
-	"src/Typename.cpp"
-	"src/Variable.cpp"
-	"src/VirtualFunction.cpp"
-	"src/detail/Indent.cpp"
-	"include/Genny.hpp"
-	"include/GennyIda.hpp"
-	"include/GennyParser.hpp"
-	"include/SdkGenny.hpp"
-	"include/sdkgenny/Array.hpp"
-	"include/sdkgenny/Class.hpp"
-	"include/sdkgenny/Constant.hpp"
-	"include/sdkgenny/Enum.hpp"
-	"include/sdkgenny/EnumClass.hpp"
-	"include/sdkgenny/Function.hpp"
-	"include/sdkgenny/GenericType.hpp"
-	"include/sdkgenny/Namespace.hpp"
-	"include/sdkgenny/Object.hpp"
-	"include/sdkgenny/Parameter.hpp"
-	"include/sdkgenny/Pointer.hpp"
-	"include/sdkgenny/Reference.hpp"
-	"include/sdkgenny/Sdk.hpp"
-	"include/sdkgenny/StaticFunction.hpp"
-	"include/sdkgenny/Struct.hpp"
-	"include/sdkgenny/Type.hpp"
-	"include/sdkgenny/Typename.hpp"
-	"include/sdkgenny/Variable.hpp"
-	"include/sdkgenny/VirtualFunction.hpp"
-	"include/sdkgenny/detail/Indent.hpp"
-)
-
-list(APPEND sdkgenny_SOURCES
+# Target: sdkgenny
+set(sdkgenny_SOURCES
+	"src/array.cpp"
+	"src/class.cpp"
+	"src/constant.cpp"
+	"src/detail/indent.cpp"
+	"src/enum.cpp"
+	"src/enum_class.cpp"
+	"src/function.cpp"
+	"src/generic_type.cpp"
+	"src/namespace.cpp"
+	"src/object.cpp"
+	"src/parameter.cpp"
+	"src/pointer.cpp"
+	"src/reference.cpp"
+	"src/sdk.cpp"
+	"src/static_function.cpp"
+	"src/struct.cpp"
+	"src/type.cpp"
+	"src/typename.cpp"
+	"src/variable.cpp"
+	"src/virtual_function.cpp"
+	"include/sdkgenny.hpp"
+	"include/sdkgenny/array.hpp"
+	"include/sdkgenny/class.hpp"
+	"include/sdkgenny/constant.hpp"
+	"include/sdkgenny/detail/indent.hpp"
+	"include/sdkgenny/enum.hpp"
+	"include/sdkgenny/enum_class.hpp"
+	"include/sdkgenny/function.hpp"
+	"include/sdkgenny/generic_type.hpp"
+	"include/sdkgenny/namespace.hpp"
+	"include/sdkgenny/object.hpp"
+	"include/sdkgenny/parameter.hpp"
+	"include/sdkgenny/pointer.hpp"
+	"include/sdkgenny/reference.hpp"
+	"include/sdkgenny/sdk.hpp"
+	"include/sdkgenny/static_function.hpp"
+	"include/sdkgenny/struct.hpp"
+	"include/sdkgenny/type.hpp"
+	"include/sdkgenny/typename.hpp"
+	"include/sdkgenny/variable.hpp"
+	"include/sdkgenny/virtual_function.hpp"
+	"include/sdkgenny_ida.hpp"
+	"include/sdkgenny_parser.hpp"
 	cmake.toml
 )
 
-set(CMKR_SOURCES ${sdkgenny_SOURCES})
 add_library(sdkgenny STATIC)
 
-if(sdkgenny_SOURCES)
-	target_sources(sdkgenny PRIVATE ${sdkgenny_SOURCES})
-endif()
-
+target_sources(sdkgenny PRIVATE ${sdkgenny_SOURCES})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${sdkgenny_SOURCES})
 
 add_library(sdkgenny::sdkgenny ALIAS sdkgenny)
@@ -119,463 +107,299 @@ target_include_directories(sdkgenny PUBLIC
 	"include/"
 )
 
-unset(CMKR_TARGET)
-unset(CMKR_SOURCES)
-
-# Target example_car
+# Target: example_car
 if(SDKGENNY_BUILD_EXAMPLES) # build-examples
-	set(CMKR_TARGET example_car)
-	set(example_car_SOURCES "")
-
-	list(APPEND example_car_SOURCES
-		"examples/Car.cpp"
-	)
-
-	list(APPEND example_car_SOURCES
+	set(example_car_SOURCES
+		"examples/car.cpp"
 		cmake.toml
 	)
 
-	set(CMKR_SOURCES ${example_car_SOURCES})
 	add_executable(example_car)
 
-	if(example_car_SOURCES)
-		target_sources(example_car PRIVATE ${example_car_SOURCES})
-	endif()
-
-	get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
-	if(NOT CMKR_VS_STARTUP_PROJECT)
-		set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT example_car)
-	endif()
-
+	target_sources(example_car PRIVATE ${example_car_SOURCES})
 	source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${example_car_SOURCES})
 
 	target_link_libraries(example_car PRIVATE
 		sdkgenny
 	)
 
-	unset(CMKR_TARGET)
-	unset(CMKR_SOURCES)
+	get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
+	if(NOT CMKR_VS_STARTUP_PROJECT)
+		set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT example_car)
+	endif()
+
 endif()
-
-# Target example_bitfield
+# Target: example_bitfield
 if(SDKGENNY_BUILD_EXAMPLES) # build-examples
-	set(CMKR_TARGET example_bitfield)
-	set(example_bitfield_SOURCES "")
-
-	list(APPEND example_bitfield_SOURCES
-		"examples/Bitfield.cpp"
-	)
-
-	list(APPEND example_bitfield_SOURCES
+	set(example_bitfield_SOURCES
+		"examples/bitfield.cpp"
 		cmake.toml
 	)
 
-	set(CMKR_SOURCES ${example_bitfield_SOURCES})
 	add_executable(example_bitfield)
 
-	if(example_bitfield_SOURCES)
-		target_sources(example_bitfield PRIVATE ${example_bitfield_SOURCES})
-	endif()
-
-	get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
-	if(NOT CMKR_VS_STARTUP_PROJECT)
-		set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT example_bitfield)
-	endif()
-
+	target_sources(example_bitfield PRIVATE ${example_bitfield_SOURCES})
 	source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${example_bitfield_SOURCES})
 
 	target_link_libraries(example_bitfield PRIVATE
 		sdkgenny
 	)
 
-	unset(CMKR_TARGET)
-	unset(CMKR_SOURCES)
+	get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
+	if(NOT CMKR_VS_STARTUP_PROJECT)
+		set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT example_bitfield)
+	endif()
+
 endif()
-
-# Target example_typename
+# Target: example_typename
 if(SDKGENNY_BUILD_EXAMPLES) # build-examples
-	set(CMKR_TARGET example_typename)
-	set(example_typename_SOURCES "")
-
-	list(APPEND example_typename_SOURCES
-		"examples/Typename.cpp"
-	)
-
-	list(APPEND example_typename_SOURCES
+	set(example_typename_SOURCES
+		"examples/typename.cpp"
 		cmake.toml
 	)
 
-	set(CMKR_SOURCES ${example_typename_SOURCES})
 	add_executable(example_typename)
 
-	if(example_typename_SOURCES)
-		target_sources(example_typename PRIVATE ${example_typename_SOURCES})
-	endif()
-
-	get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
-	if(NOT CMKR_VS_STARTUP_PROJECT)
-		set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT example_typename)
-	endif()
-
+	target_sources(example_typename PRIVATE ${example_typename_SOURCES})
 	source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${example_typename_SOURCES})
 
 	target_link_libraries(example_typename PRIVATE
 		sdkgenny
 	)
 
-	unset(CMKR_TARGET)
-	unset(CMKR_SOURCES)
+	get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
+	if(NOT CMKR_VS_STARTUP_PROJECT)
+		set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT example_typename)
+	endif()
+
 endif()
-
-# Target example_usage
+# Target: example_usage
 if(SDKGENNY_BUILD_EXAMPLES) # build-examples
-	set(CMKR_TARGET example_usage)
-	set(example_usage_SOURCES "")
-
-	list(APPEND example_usage_SOURCES
-		"examples/Usage.cpp"
-	)
-
-	list(APPEND example_usage_SOURCES
+	set(example_usage_SOURCES
+		"examples/usage.cpp"
 		cmake.toml
 	)
 
-	set(CMKR_SOURCES ${example_usage_SOURCES})
 	add_executable(example_usage)
 
-	if(example_usage_SOURCES)
-		target_sources(example_usage PRIVATE ${example_usage_SOURCES})
-	endif()
-
-	get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
-	if(NOT CMKR_VS_STARTUP_PROJECT)
-		set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT example_usage)
-	endif()
-
+	target_sources(example_usage PRIVATE ${example_usage_SOURCES})
 	source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${example_usage_SOURCES})
 
 	target_link_libraries(example_usage PRIVATE
 		sdkgenny
 	)
 
-	unset(CMKR_TARGET)
-	unset(CMKR_SOURCES)
+	get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
+	if(NOT CMKR_VS_STARTUP_PROJECT)
+		set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT example_usage)
+	endif()
+
 endif()
-
-# Target example_sdk
+# Target: example_sdk
 if(SDKGENNY_BUILD_EXAMPLES) # build-examples
-	set(CMKR_TARGET example_sdk)
-	set(example_sdk_SOURCES "")
-
-	list(APPEND example_sdk_SOURCES
-		"examples/Sdk.cpp"
-	)
-
-	list(APPEND example_sdk_SOURCES
+	set(example_sdk_SOURCES
+		"examples/sdk.cpp"
 		cmake.toml
 	)
 
-	set(CMKR_SOURCES ${example_sdk_SOURCES})
 	add_executable(example_sdk)
 
-	if(example_sdk_SOURCES)
-		target_sources(example_sdk PRIVATE ${example_sdk_SOURCES})
-	endif()
-
-	get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
-	if(NOT CMKR_VS_STARTUP_PROJECT)
-		set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT example_sdk)
-	endif()
-
+	target_sources(example_sdk PRIVATE ${example_sdk_SOURCES})
 	source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${example_sdk_SOURCES})
 
 	target_link_libraries(example_sdk PRIVATE
 		sdkgenny
 	)
 
-	unset(CMKR_TARGET)
-	unset(CMKR_SOURCES)
+	get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
+	if(NOT CMKR_VS_STARTUP_PROJECT)
+		set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT example_sdk)
+	endif()
+
 endif()
-
-# Target example_dummydata
+# Target: example_dummydata
 if(SDKGENNY_BUILD_EXAMPLES) # build-examples
-	set(CMKR_TARGET example_dummydata)
-	set(example_dummydata_SOURCES "")
-
-	list(APPEND example_dummydata_SOURCES
-		"examples/DummyData.cpp"
-	)
-
-	list(APPEND example_dummydata_SOURCES
+	set(example_dummydata_SOURCES
+		"examples/dummydata.cpp"
 		cmake.toml
 	)
 
-	set(CMKR_SOURCES ${example_dummydata_SOURCES})
 	add_executable(example_dummydata)
 
-	if(example_dummydata_SOURCES)
-		target_sources(example_dummydata PRIVATE ${example_dummydata_SOURCES})
-	endif()
-
-	get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
-	if(NOT CMKR_VS_STARTUP_PROJECT)
-		set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT example_dummydata)
-	endif()
-
+	target_sources(example_dummydata PRIVATE ${example_dummydata_SOURCES})
 	source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${example_dummydata_SOURCES})
 
 	target_link_libraries(example_dummydata PRIVATE
 		sdkgenny
 	)
 
-	unset(CMKR_TARGET)
-	unset(CMKR_SOURCES)
+	get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
+	if(NOT CMKR_VS_STARTUP_PROJECT)
+		set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT example_dummydata)
+	endif()
+
 endif()
-
-# Target example_badname
+# Target: example_badname
 if(SDKGENNY_BUILD_EXAMPLES) # build-examples
-	set(CMKR_TARGET example_badname)
-	set(example_badname_SOURCES "")
-
-	list(APPEND example_badname_SOURCES
-		"examples/BadName.cpp"
-	)
-
-	list(APPEND example_badname_SOURCES
+	set(example_badname_SOURCES
+		"examples/badname.cpp"
 		cmake.toml
 	)
 
-	set(CMKR_SOURCES ${example_badname_SOURCES})
 	add_executable(example_badname)
 
-	if(example_badname_SOURCES)
-		target_sources(example_badname PRIVATE ${example_badname_SOURCES})
-	endif()
-
-	get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
-	if(NOT CMKR_VS_STARTUP_PROJECT)
-		set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT example_badname)
-	endif()
-
+	target_sources(example_badname PRIVATE ${example_badname_SOURCES})
 	source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${example_badname_SOURCES})
 
 	target_link_libraries(example_badname PRIVATE
 		sdkgenny
 	)
 
-	unset(CMKR_TARGET)
-	unset(CMKR_SOURCES)
+	get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
+	if(NOT CMKR_VS_STARTUP_PROJECT)
+		set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT example_badname)
+	endif()
+
 endif()
-
-# Target example_constants
+# Target: example_constants
 if(SDKGENNY_BUILD_EXAMPLES) # build-examples
-	set(CMKR_TARGET example_constants)
-	set(example_constants_SOURCES "")
-
-	list(APPEND example_constants_SOURCES
-		"examples/Constants.cpp"
-	)
-
-	list(APPEND example_constants_SOURCES
+	set(example_constants_SOURCES
+		"examples/constants.cpp"
 		cmake.toml
 	)
 
-	set(CMKR_SOURCES ${example_constants_SOURCES})
 	add_executable(example_constants)
 
-	if(example_constants_SOURCES)
-		target_sources(example_constants PRIVATE ${example_constants_SOURCES})
-	endif()
-
-	get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
-	if(NOT CMKR_VS_STARTUP_PROJECT)
-		set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT example_constants)
-	endif()
-
+	target_sources(example_constants PRIVATE ${example_constants_SOURCES})
 	source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${example_constants_SOURCES})
 
 	target_link_libraries(example_constants PRIVATE
 		sdkgenny
 	)
 
-	unset(CMKR_TARGET)
-	unset(CMKR_SOURCES)
+	get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
+	if(NOT CMKR_VS_STARTUP_PROJECT)
+		set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT example_constants)
+	endif()
+
 endif()
-
-# Target example_multiple_inheritance
+# Target: example_multiple_inheritance
 if(SDKGENNY_BUILD_EXAMPLES) # build-examples
-	set(CMKR_TARGET example_multiple_inheritance)
-	set(example_multiple_inheritance_SOURCES "")
-
-	list(APPEND example_multiple_inheritance_SOURCES
-		"examples/MultipleInheritance.cpp"
-	)
-
-	list(APPEND example_multiple_inheritance_SOURCES
+	set(example_multiple_inheritance_SOURCES
+		"examples/multiple_inheritance.cpp"
 		cmake.toml
 	)
 
-	set(CMKR_SOURCES ${example_multiple_inheritance_SOURCES})
 	add_executable(example_multiple_inheritance)
 
-	if(example_multiple_inheritance_SOURCES)
-		target_sources(example_multiple_inheritance PRIVATE ${example_multiple_inheritance_SOURCES})
-	endif()
-
-	get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
-	if(NOT CMKR_VS_STARTUP_PROJECT)
-		set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT example_multiple_inheritance)
-	endif()
-
+	target_sources(example_multiple_inheritance PRIVATE ${example_multiple_inheritance_SOURCES})
 	source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${example_multiple_inheritance_SOURCES})
 
 	target_link_libraries(example_multiple_inheritance PRIVATE
 		sdkgenny
 	)
 
-	unset(CMKR_TARGET)
-	unset(CMKR_SOURCES)
-endif()
-
-# Target example_parser
-if(SDKGENNY_BUILD_EXAMPLES) # build-examples
-	set(CMKR_TARGET example_parser)
-	set(example_parser_SOURCES "")
-
-	list(APPEND example_parser_SOURCES
-		"examples/Parser.cpp"
-	)
-
-	list(APPEND example_parser_SOURCES
-		cmake.toml
-	)
-
-	set(CMKR_SOURCES ${example_parser_SOURCES})
-	add_executable(example_parser)
-
-	if(example_parser_SOURCES)
-		target_sources(example_parser PRIVATE ${example_parser_SOURCES})
-	endif()
-
 	get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
 	if(NOT CMKR_VS_STARTUP_PROJECT)
-		set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT example_parser)
+		set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT example_multiple_inheritance)
 	endif()
 
-	source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${example_parser_SOURCES})
-
-	target_link_libraries(example_parser PRIVATE
-		sdkgenny
-		taocpp::pegtl
-	)
-
-	unset(CMKR_TARGET)
-	unset(CMKR_SOURCES)
 endif()
-
-# Target example_generictype
+# Target: example_parser
 if(SDKGENNY_BUILD_EXAMPLES) # build-examples
-	set(CMKR_TARGET example_generictype)
-	set(example_generictype_SOURCES "")
+	if(SDKGENNY_BUILD_PARSER) # build-parser
+		set(example_parser_SOURCES
+			"examples/parser.cpp"
+			cmake.toml
+		)
 
-	list(APPEND example_generictype_SOURCES
-		"examples/GenericType.cpp"
-	)
+		add_executable(example_parser)
 
-	list(APPEND example_generictype_SOURCES
+		target_sources(example_parser PRIVATE ${example_parser_SOURCES})
+		source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${example_parser_SOURCES})
+
+		target_link_libraries(example_parser PRIVATE
+			sdkgenny
+		)
+
+		target_link_libraries(example_parser PRIVATE
+			taocpp::pegtl
+		)
+
+		get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
+		if(NOT CMKR_VS_STARTUP_PROJECT)
+			set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT example_parser)
+		endif()
+
+	endif()
+endif()
+# Target: example_generictype
+if(SDKGENNY_BUILD_EXAMPLES) # build-examples
+	set(example_generictype_SOURCES
+		"examples/generictype.cpp"
 		cmake.toml
 	)
 
-	set(CMKR_SOURCES ${example_generictype_SOURCES})
 	add_executable(example_generictype)
 
-	if(example_generictype_SOURCES)
-		target_sources(example_generictype PRIVATE ${example_generictype_SOURCES})
-	endif()
-
-	get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
-	if(NOT CMKR_VS_STARTUP_PROJECT)
-		set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT example_generictype)
-	endif()
-
+	target_sources(example_generictype PRIVATE ${example_generictype_SOURCES})
 	source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${example_generictype_SOURCES})
 
 	target_link_libraries(example_generictype PRIVATE
 		sdkgenny
 	)
 
-	unset(CMKR_TARGET)
-	unset(CMKR_SOURCES)
+	get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
+	if(NOT CMKR_VS_STARTUP_PROJECT)
+		set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT example_generictype)
+	endif()
+
 endif()
-
-# Target example_childstruct
+# Target: example_childstruct
 if(SDKGENNY_BUILD_EXAMPLES) # build-examples
-	set(CMKR_TARGET example_childstruct)
-	set(example_childstruct_SOURCES "")
-
-	list(APPEND example_childstruct_SOURCES
-		"examples/ChildStruct.cpp"
-	)
-
-	list(APPEND example_childstruct_SOURCES
+	set(example_childstruct_SOURCES
+		"examples/childstruct.cpp"
 		cmake.toml
 	)
 
-	set(CMKR_SOURCES ${example_childstruct_SOURCES})
 	add_executable(example_childstruct)
 
-	if(example_childstruct_SOURCES)
-		target_sources(example_childstruct PRIVATE ${example_childstruct_SOURCES})
-	endif()
-
-	get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
-	if(NOT CMKR_VS_STARTUP_PROJECT)
-		set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT example_childstruct)
-	endif()
-
+	target_sources(example_childstruct PRIVATE ${example_childstruct_SOURCES})
 	source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${example_childstruct_SOURCES})
 
 	target_link_libraries(example_childstruct PRIVATE
 		sdkgenny
 	)
 
-	unset(CMKR_TARGET)
-	unset(CMKR_SOURCES)
+	get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
+	if(NOT CMKR_VS_STARTUP_PROJECT)
+		set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT example_childstruct)
+	endif()
+
 endif()
-
-# Target example_nestedstruct
+# Target: example_nestedstruct
 if(SDKGENNY_BUILD_EXAMPLES) # build-examples
-	set(CMKR_TARGET example_nestedstruct)
-	set(example_nestedstruct_SOURCES "")
-
-	list(APPEND example_nestedstruct_SOURCES
-		"examples/NestedStruct.cpp"
-	)
-
-	list(APPEND example_nestedstruct_SOURCES
+	set(example_nestedstruct_SOURCES
+		"examples/nestedstruct.cpp"
 		cmake.toml
 	)
 
-	set(CMKR_SOURCES ${example_nestedstruct_SOURCES})
 	add_executable(example_nestedstruct)
 
-	if(example_nestedstruct_SOURCES)
-		target_sources(example_nestedstruct PRIVATE ${example_nestedstruct_SOURCES})
-	endif()
+	target_sources(example_nestedstruct PRIVATE ${example_nestedstruct_SOURCES})
+	source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${example_nestedstruct_SOURCES})
+
+	target_link_libraries(example_nestedstruct PRIVATE
+		sdkgenny
+	)
+
+	target_link_libraries(example_nestedstruct PRIVATE
+		taocpp::pegtl
+	)
 
 	get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
 	if(NOT CMKR_VS_STARTUP_PROJECT)
 		set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT example_nestedstruct)
 	endif()
 
-	source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${example_nestedstruct_SOURCES})
-
-	target_link_libraries(example_nestedstruct PRIVATE
-		sdkgenny
-		taocpp::pegtl
-	)
-
-	unset(CMKR_TARGET)
-	unset(CMKR_SOURCES)
 endif()
-

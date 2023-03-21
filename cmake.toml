@@ -4,16 +4,17 @@ name = "sdkgenny"
 
 [options]
 SDKGENNY_BUILD_EXAMPLES = false
+SDKGENNY_BUILD_PARSER = false
 
 [conditions]
 build-examples = "SDKGENNY_BUILD_EXAMPLES"
+build-parser = "SDKGENNY_BUILD_PARSER"
 
-[vcpkg]
-version = "2022.05.10"
-packages = ["pegtl"]
-
-[find-package]
-pegtl = { required = false }
+[fetch-content.PEGTL]
+condition = "build-parser"
+git = "https://github.com/taocpp/PEGTL.git"
+tag = "3.2.7"
+shallow = true
 
 [target.sdkgenny]
 type = "static"
@@ -23,80 +24,62 @@ include-directories = ["include/"]
 compile-features = ["cxx_std_17"]
 alias = "sdkgenny::sdkgenny"
 
-[target.example_car]
+[template.example]
 condition = "build-examples"
 type = "executable"
-sources = ["examples/Car.cpp"]
 link-libraries = ["sdkgenny"]
+
+[target.example_car]
+type = "example"
+sources = ["examples/car.cpp"]
 
 [target.example_bitfield]
-condition = "build-examples"
-type = "executable"
-sources = ["examples/Bitfield.cpp"]
-link-libraries = ["sdkgenny"]
+type = "example"
+sources = ["examples/bitfield.cpp"]
 
 [target.example_typename]
-condition = "build-examples"
-type = "executable"
-sources = ["examples/Typename.cpp"]
-link-libraries = ["sdkgenny"]
+type = "example"
+sources = ["examples/typename.cpp"]
 
 [target.example_usage]
-condition = "build-examples"
-type = "executable"
-sources = ["examples/Usage.cpp"]
-link-libraries = ["sdkgenny"]
+type = "example"
+sources = ["examples/usage.cpp"]
 
 [target.example_sdk]
-condition = "build-examples"
-type = "executable"
-sources = ["examples/Sdk.cpp"]
-link-libraries = ["sdkgenny"]
+type = "example"
+sources = ["examples/sdk.cpp"]
 
 [target.example_dummydata]
-condition = "build-examples"
-type = "executable"
-sources = ["examples/DummyData.cpp"]
-link-libraries = ["sdkgenny"]
+type = "example"
+sources = ["examples/dummydata.cpp"]
 
 [target.example_badname]
-condition = "build-examples"
-type = "executable"
-sources = ["examples/BadName.cpp"]
-link-libraries = ["sdkgenny"]
+type = "example"
+sources = ["examples/badname.cpp"]
 
 [target.example_constants]
-condition = "build-examples"
-type = "executable"
-sources = ["examples/Constants.cpp"]
-link-libraries = ["sdkgenny"]
+type = "example"
+sources = ["examples/constants.cpp"]
 
 [target.example_multiple_inheritance]
-condition = "build-examples"
-type = "executable"
-sources = ["examples/MultipleInheritance.cpp"]
-link-libraries = ["sdkgenny"]
+type = "example"
+sources = ["examples/multiple_inheritance.cpp"]
 
 [target.example_parser]
-condition = "build-examples"
-type = "executable"
-sources = ["examples/Parser.cpp"]
-link-libraries = ["sdkgenny", "taocpp::pegtl"]
+condition = "build-parser"
+type = "example"
+sources = ["examples/parser.cpp"]
+link-libraries = ["taocpp::pegtl"]
 
 [target.example_generictype]
-condition = "build-examples"
-type = "executable"
-sources = ["examples/GenericType.cpp"]
-link-libraries = ["sdkgenny"]
+type = "example"
+sources = ["examples/generictype.cpp"]
 
 [target.example_childstruct]
-condition = "build-examples"
-type = "executable"
-sources = ["examples/ChildStruct.cpp"]
-link-libraries = ["sdkgenny"]
+type = "example"
+sources = ["examples/childstruct.cpp"]
 
 [target.example_nestedstruct]
-condition = "build-examples"
-type = "executable"
-sources = ["examples/NestedStruct.cpp"]
-link-libraries = ["sdkgenny", "taocpp::pegtl"]
+type = "example"
+sources = ["examples/nestedstruct.cpp"]
+link-libraries = ["taocpp::pegtl"]
