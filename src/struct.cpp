@@ -104,6 +104,7 @@ void Struct::generate_forward_decl(std::ostream& os) const {
 }
 
 void Struct::generate(std::ostream& os) const {
+    generate_comment(os);
     generate_metadata(os);
     os << "struct " << usable_name_decl();
     generate_inheritance(os);

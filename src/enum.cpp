@@ -31,6 +31,7 @@ void Enum::generate_forward_decl(std::ostream& os) const {
 }
 
 void Enum::generate(std::ostream& os) const {
+    generate_comment(os);
     os << "enum " << usable_name_decl();
     generate_type(os);
     os << " {\n";

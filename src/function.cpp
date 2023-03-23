@@ -13,6 +13,7 @@ Parameter* Function::param(std::string_view name) {
 }
 
 void Function::generate(std::ostream& os) const {
+    generate_comment(os);
     generate_prototype(os);
     os << ";\n";
 }

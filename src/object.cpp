@@ -1,3 +1,5 @@
+#include <sstream>
+
 #include <sdkgenny/namespace.hpp>
 #include <sdkgenny/struct.hpp>
 
@@ -22,6 +24,19 @@ void Object::generate_metadata(std::ostream& os) const {
     }
 
     os << "\n";
+}
+
+void Object::generate_comment(std::ostream& os) const {
+    if (m_comment.empty()) {
+        return;
+    }
+
+    std::istringstream iss{m_comment};
+    std::string line{};
+
+    while (std::getline(iss, line)) {
+        os << "// " << line << "\n";
+    }
 }
 
 std::unique_ptr<Object> Object::remove(Object* obj) {
