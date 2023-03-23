@@ -26,10 +26,18 @@ public:
 
     const auto& metadata() const { return m_metadata; }
     auto& metadata() { return m_metadata; }
-
     virtual void generate_metadata(std::ostream& os) const;
 
+    const std::string& comment() const { return m_comment; }
+    Object* comment(std::string comment) {
+        m_comment = std::move(comment);
+        return this;
+    }
+    virtual void generate_comment(std::ostream& os) const;
+
     template <typename T> bool is_a() const { return dynamic_cast<const T*>(this) != nullptr; }
+    template <typename T> const T* as() const { return dynamic_cast<const T*>(this); }
+    template <typename T> T* as() { return dynamic_cast<T*>(this); }
 
     // Searches for an owner of the correct type.
     template <typename T> const T* owner() const {
@@ -209,6 +217,7 @@ protected:
     std::string m_name{};
     std::vector<std::unique_ptr<Object>> m_children{};
     std::vector<std::string> m_metadata{};
+    std::string m_comment{};
 
     bool m_skip_generation{};
 };

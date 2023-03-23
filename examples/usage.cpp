@@ -15,17 +15,17 @@ int main(int argc, char* argv[]) {
     auto ns = g->namespace_("foobar");
 
     // Make a class in the namespace.
-    auto foo = ns->class_("Foo");
+    auto foo = ns->class_("Foo")->comment("A class")->as<sdkgenny::Class>();
 
     // Add some members.
-    foo->variable("a")->type("int")->offset(0);
-    foo->variable("b")->type("float")->append();
+    foo->variable("a")->type("int")->offset(0)->comment("The first member");
+    foo->variable("b")->type("float")->append()->comment("The second member");
 
     // Make a subclass.
-    auto bar = ns->class_("Bar")->parent(foo);
+    auto bar = ns->class_("Bar")->parent(foo)->comment("A subclass of Foo")->as<sdkgenny::Class>();
 
     // Add a member after 'b'.
-    bar->variable("c")->type("int")->append();
+    bar->variable("c")->type("int")->append()->comment("The third member");
 
     // Generate the SDK to the "usage_sdk" folder.
     sdk.generate(std::filesystem::current_path() / "usage_sdk");

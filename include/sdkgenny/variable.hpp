@@ -34,13 +34,7 @@ public:
     // Sets the offset to be after the last variable in the struct.
     Variable* append();
 
-    virtual size_t size() const {
-        if (m_type == nullptr) {
-            return 0;
-        }
-
-        return m_type->size();
-    }
+    virtual size_t size() const;
 
     auto end() const { return offset() + size(); }
 
@@ -63,18 +57,7 @@ public:
     // Call this after append() or offset()
     Variable* bit_append();
 
-    virtual void generate(std::ostream& os) const {
-        generate_metadata(os);
-        m_type->generate_typename_for(os, this);
-        os << " " << usable_name();
-        m_type->generate_variable_postamble(os);
-
-        if (m_bit_size != 0) {
-            os << " : " << std::dec << m_bit_size;
-        }
-
-        os << "; // 0x" << std::hex << m_offset << "\n";
-    }
+    virtual void generate(std::ostream& os) const;
 
 protected:
     Type* m_type{};

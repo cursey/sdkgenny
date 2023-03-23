@@ -17,8 +17,9 @@ Constant* Constant::string(const std::string& value) {
 }
 
 void Constant::generate(std::ostream& os) const {
-    os << "static constexpr ";
+    generate_comment(os);
     generate_metadata(os);
+    os << "static constexpr ";
     m_type->generate_typename_for(os, this);
     os << " " << usable_name();
     m_type->generate_variable_postamble(os);

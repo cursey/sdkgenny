@@ -57,6 +57,14 @@ Variable* Variable::append() {
     return this;
 }
 
+size_t Variable::size() const {
+    if (m_type == nullptr) {
+        return 0;
+    }
+
+    return m_type->size();
+}
+
 Variable* Variable::bit_append() {
     auto struct_ = owner<Struct>();
     uintptr_t highest_bit{};
@@ -79,5 +87,19 @@ Variable* Variable::bit_append() {
     }
 
     return this;
+}
+
+void Variable::generate(std::ostream& os) const {
+    generate_comment(os);
+    generate_metadata(os);
+    m_type->generate_typename_for(os, this);
+    os << " " << usable_name();
+    m_type->generate_variable_postamble(os);
+
+    if (m_bit_size != 0) {
+        os << " : " << std::dec << m_bit_size;
+    }
+
+    os << "; // 0x" << std::hex << m_offset << "\n";
 }
 } // namespace sdkgenny

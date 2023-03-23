@@ -8,6 +8,7 @@ void EnumClass::generate_forward_decl(std::ostream& os) const {
     os << "enum class " << usable_name_decl() << ";\n";
 }
 void EnumClass::generate(std::ostream& os) const {
+    generate_comment(os);
     os << "enum class " << usable_name_decl();
     generate_type(os);
     os << " {\n";
