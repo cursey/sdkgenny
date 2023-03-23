@@ -258,9 +258,10 @@ void Struct::generate_bitfield(std::ostream& os, uintptr_t offset) const {
 
     for (auto&& [bit_offset, var] : bitfield(offset)) {
         if (bit_offset - last_bit > 0) {
+            os << "private: ";
             var->type()->generate_typename_for(os, var);
             os << " pad_bitfield_" << std::hex << offset << "_" << std::hex << last_bit << " : " << std::dec
-               << bit_offset - last_bit << ";\n";
+               << bit_offset - last_bit << "; public:\n";
         }
 
         var->generate(os);
@@ -274,9 +275,10 @@ void Struct::generate_bitfield(std::ostream& os, uintptr_t offset) const {
     if (last_bit != num_bits) {
         auto bit_offset = num_bits;
 
+        os << "private: ";
         bitfield_type->generate_typename_for(os, nullptr);
         os << " pad_bitfield_" << std::hex << offset << "_" << std::hex << last_bit << " : " << std::dec
-           << bit_offset - last_bit << ";\n";
+           << bit_offset - last_bit << "; public:\n";
     }
 }
 
@@ -335,7 +337,8 @@ void Struct::generate_internal(std::ostream& os) const {
             }
 
             if (offset - last_offset > 0) {
-                os << "char pad_" << std::hex << last_offset << "[0x" << std::hex << offset - last_offset << "];\n";
+                os << "private: char pad_" << std::hex << last_offset << "[0x" << std::hex << offset - last_offset
+                   << "]; public:\n";
             }
 
             if (var->is_bitfield()) {
@@ -352,7 +355,8 @@ void Struct::generate_internal(std::ostream& os) const {
     }
 
     if (offset - last_offset > 0) {
-        os << "char pad_" << std::hex << last_offset << "[0x" << std::hex << offset - last_offset << "];\n";
+        os << "private: char pad_" << std::hex << last_offset << "[0x" << std::hex << offset - last_offset
+           << "]; public:\n";
     }
 
     if (has_any<Function>()) {
@@ -384,7 +388,7 @@ void Struct::generate_internal(std::ostream& os) const {
                 if (vtable_index == 0) {
                     os << "virtual ~" << usable_name() << "() = default;\n";
                 } else {
-                    os << "virtual void virtual_function_" << std::dec << vtable_index << "() = 0;\n";
+                    os << "private: virtual void virtual_function_" << std::dec << vtable_index << "() = 0; public:\n";
                 }
             }
         }
