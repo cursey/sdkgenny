@@ -83,6 +83,7 @@ type = "example"
 sources = ["examples/childstruct.cpp"]
 
 [target.example_nestedstruct]
+condition = "build-parser"
 type = "example"
 sources = ["examples/nestedstruct.cpp"]
 link-libraries = ["taocpp::pegtl"]

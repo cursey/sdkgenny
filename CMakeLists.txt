@@ -407,27 +407,29 @@ if(SDKGENNY_BUILD_EXAMPLES) # build-examples
 endif()
 # Target: example_nestedstruct
 if(SDKGENNY_BUILD_EXAMPLES) # build-examples
-	set(example_nestedstruct_SOURCES
-		"examples/nestedstruct.cpp"
-		cmake.toml
-	)
+	if(SDKGENNY_BUILD_PARSER) # build-parser
+		set(example_nestedstruct_SOURCES
+			"examples/nestedstruct.cpp"
+			cmake.toml
+		)
 
-	add_executable(example_nestedstruct)
+		add_executable(example_nestedstruct)
 
-	target_sources(example_nestedstruct PRIVATE ${example_nestedstruct_SOURCES})
-	source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${example_nestedstruct_SOURCES})
+		target_sources(example_nestedstruct PRIVATE ${example_nestedstruct_SOURCES})
+		source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${example_nestedstruct_SOURCES})
 
-	target_link_libraries(example_nestedstruct PRIVATE
-		sdkgenny
-	)
+		target_link_libraries(example_nestedstruct PRIVATE
+			sdkgenny
+		)
 
-	target_link_libraries(example_nestedstruct PRIVATE
-		taocpp::pegtl
-	)
+		target_link_libraries(example_nestedstruct PRIVATE
+			taocpp::pegtl
+		)
 
-	get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
-	if(NOT CMKR_VS_STARTUP_PROJECT)
-		set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT example_nestedstruct)
+		get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
+		if(NOT CMKR_VS_STARTUP_PROJECT)
+			set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT example_nestedstruct)
+		endif()
+
 	endif()
-
 endif()

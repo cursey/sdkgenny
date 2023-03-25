@@ -65,16 +65,17 @@ void Function::generate_procedure(std::ostream& os) const {
     std::vector<const Object*> owners{};
 
     for (auto o = owner<Object>(); o != nullptr; o = o->owner<Object>()) {
+        // The global NS will have an empty name, at which point we stop.
+        if (o->usable_name().empty()) {
+            break;
+        }
+
         owners.emplace_back(o);
     }
 
     std::reverse(owners.begin(), owners.end());
 
     for (auto&& o : owners) {
-        if (o->usable_name().empty()) {
-            continue;
-        }
-
         os << o->usable_name() << "::";
     }
 
