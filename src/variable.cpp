@@ -20,7 +20,7 @@ Variable* Variable::append() {
     if (highest_var != nullptr) {
         // Both bitfields of the same type.
         if (is_bitfield() && highest_var->is_bitfield() && m_type == highest_var->type()) {
-            auto highest_bit = 0;
+            uintptr_t highest_bit = 0;
             auto bf = struct_->bitfield(highest_var->offset(), this);
 
             for (auto&& [bit_offset, bit_var] : bf) {

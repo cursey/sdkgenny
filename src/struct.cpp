@@ -253,7 +253,7 @@ void Struct::generate_inheritance(std::ostream& os) const {
 }
 
 void Struct::generate_bitfield(std::ostream& os, uintptr_t offset) const {
-    auto last_bit = 0;
+    uintptr_t last_bit = 0;
     Type* bitfield_type{};
 
     for (auto&& [bit_offset, var] : bitfield(offset)) {

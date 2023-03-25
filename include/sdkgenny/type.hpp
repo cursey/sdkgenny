@@ -15,7 +15,7 @@ class Type : public Typename {
 public:
     explicit Type(std::string_view name);
 
-    virtual void generate_variable_postamble(std::ostream& os) const {}
+    virtual void generate_variable_postamble(std::ostream& os [[maybe_unused]]) const {}
 
     virtual size_t size() const { return m_size; }
     auto size(int size) {

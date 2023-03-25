@@ -103,6 +103,34 @@ target_compile_features(sdkgenny PUBLIC
 	cxx_std_17
 )
 
+if(MSVC) # msvc
+	target_compile_options(sdkgenny PRIVATE
+		"/permissive-"
+		"/W4"
+		"/w14640"
+	)
+endif()
+
+if((CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND NOT CMAKE_CXX_COMPILER_FRONTEND_VARIANT MATCHES "^MSVC$") OR (CMAKE_C_COMPILER_ID MATCHES "Clang" AND NOT CMAKE_C_COMPILER_FRONTEND_VARIANT MATCHES "^MSVC$")) # clang
+	target_compile_options(sdkgenny PRIVATE
+		-Wall
+		-Wextra
+		-Wshadow
+		-Wnon-virtual-dtor
+		-pedantic
+	)
+endif()
+
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_C_COMPILER_ID STREQUAL "GNU") # gcc
+	target_compile_options(sdkgenny PRIVATE
+		-Wall
+		-Wextra
+		-Wshadow
+		-Wnon-virtual-dtor
+		-pedantic
+	)
+endif()
+
 target_include_directories(sdkgenny PUBLIC
 	"include/"
 )

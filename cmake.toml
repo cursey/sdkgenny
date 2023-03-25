@@ -23,6 +23,9 @@ sources = ["src/**.cpp"]
 include-directories = ["include/"]
 compile-features = ["cxx_std_17"]
 alias = "sdkgenny::sdkgenny"
+msvc.private-compile-options = ["/permissive-", "/W4", "/w14640"]
+clang.private-compile-options = ["-Wall", "-Wextra", "-Wshadow", "-Wnon-virtual-dtor", "-pedantic"]
+gcc.private-compile-options = ["-Wall", "-Wextra", "-Wshadow", "-Wnon-virtual-dtor", "-pedantic"]
 
 [template.example]
 condition = "build-examples"
