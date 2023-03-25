@@ -21,6 +21,6 @@ int Indent::overflow(int ch) {
         m_dest->sputn(m_indent.data(), m_indent.size());
     }
     m_is_at_start_of_line = ch == '\n';
-    return m_dest->sputc(ch);
+    return m_dest->sputc(static_cast<char>(ch));
 }
 } // namespace sdkgenny::detail
