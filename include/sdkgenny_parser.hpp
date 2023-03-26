@@ -122,7 +122,7 @@ struct FnDecl : seq<opt<FnPrefix>, Seps, FnRet, Seps, FnName, Seps, FnParams, Se
 struct StaticAssert : disable<TAO_PEGTL_STRING("static_assert"), until<one<';'>>> {};
 
 struct Decl : sor<IncludeDecl, ImportDecl, TypeDecl, NsExpr, EnumExpr, StructExpr, StaticAssert> {};
-struct Grammar : until<eof, sor<eol, Sep, Decl>> {};
+struct Grammar : until<eof, must<sor<eol, Sep, Decl>>> {};
 
 struct State {
     std::filesystem::path filepath{std::filesystem::current_path()};
