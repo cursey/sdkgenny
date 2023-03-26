@@ -302,6 +302,10 @@ enum class Color : byte {
 }
 )";
 
+constexpr auto g_bad_metadata = R"(
+type byte 1 [[u8]]]
+)";
+
 namespace pegtl = tao::pegtl;
 
 int main(int argc, char* argv[]) {
@@ -326,6 +330,7 @@ int main(int argc, char* argv[]) {
     // pegtl::string_input in{g_reclass, "reclass"};
     // pegtl::string_input in{g_multiple_inheritance, "multiple_inheritance"};
     // pegtl::string_input in{g_enum_with_type, "enum_with_type"};
+    // pegtl::string_input in{g_bad_metadata, "bad_metadata"};
 
     try {
         auto r = pegtl::parse<sdkgenny::parser::Grammar, sdkgenny::parser::Action>(in, s);
