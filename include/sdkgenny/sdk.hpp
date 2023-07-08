@@ -19,7 +19,6 @@ namespace sdkgenny {
 class Sdk : public Object {
 public:
     Sdk();
-    virtual ~Sdk() = default;
 
     auto global_ns() const { return m_global_ns.get(); }
 
@@ -55,7 +54,7 @@ public:
         return this;
     }
 
-    const auto& generate_namespaces() { return m_generate_namespaces; }
+    const auto& generate_namespaces() const { return m_generate_namespaces; }
     auto generate_namespaces(bool gen_ns) {
         m_generate_namespaces = gen_ns;
         return this;
@@ -65,7 +64,7 @@ public:
     // as ReGenny.
     const auto& imports() const { return m_imports; }
     auto import(std::filesystem::path filepath) {
-        m_imports.emplace(filepath);
+        m_imports.emplace(std::move(filepath));
         return this;
     }
 

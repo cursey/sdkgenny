@@ -18,7 +18,7 @@ public:
     virtual void generate_variable_postamble(std::ostream& os [[maybe_unused]]) const {}
 
     virtual size_t size() const { return m_size; }
-    auto size(int size) {
+    auto size(size_t size) {
         m_size = size;
         return this;
     }

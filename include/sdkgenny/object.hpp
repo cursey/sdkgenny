@@ -204,7 +204,7 @@ public:
         m_skip_generation = g;
         return this;
     }
-    auto skip_generation() { return m_skip_generation; }
+    auto skip_generation() const { return m_skip_generation; }
 
 protected:
     friend class Type;
