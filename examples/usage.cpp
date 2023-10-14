@@ -18,8 +18,8 @@ int main(int argc, char* argv[]) {
     auto foo = ns->class_("Foo")->comment("A class")->as<sdkgenny::Class>();
 
     // Add some members.
-    foo->variable("a")->type("int")->offset(0)->comment("The first member");
-    foo->variable("b")->type("float")->append()->comment("The second member");
+    foo->variable("a")->type("int")->offset(0)->comment("The first member")->prepend_comment("This is");
+    foo->variable("b")->type("float")->append()->comment("The second member")->append_comment("Is really cool");
 
     // Make a subclass.
     auto bar = ns->class_("Bar")->parent(foo)->comment("A subclass of Foo")->as<sdkgenny::Class>();
