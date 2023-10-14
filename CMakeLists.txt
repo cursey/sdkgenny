@@ -100,7 +100,7 @@ source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${sdkgenny_SOURCES})
 
 add_library(sdkgenny::sdkgenny ALIAS sdkgenny)
 target_compile_features(sdkgenny PUBLIC
-	cxx_std_17
+	cxx_std_23
 )
 
 if(MSVC) # msvc

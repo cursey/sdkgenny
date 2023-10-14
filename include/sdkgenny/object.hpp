@@ -8,6 +8,7 @@
 #include <string>
 #include <unordered_set>
 #include <vector>
+#include <format>
 
 namespace sdkgenny {
 class Struct;
@@ -29,8 +30,16 @@ public:
     virtual void generate_metadata(std::ostream& os) const;
 
     const std::string& comment() const { return m_comment; }
-    Object* comment(std::string comment) {
-        m_comment = std::move(comment);
+    Object* comment(std::string_view format, auto&&... args) {
+        m_comment = std::vformat(format, std::make_format_args(args...)) + "\n";
+        return this;
+    }
+    Object* append_comment(std::string_view format, auto&&... args) {
+        m_comment += std::vformat(format, std::make_format_args(args...)) + "\n";
+        return this;
+    }
+    Object* prepend_comment(std::string_view format, auto&&... args) {
+        m_comment = std::vformat(format, std::make_format_args(args...)) + "\n" + m_comment;
         return this;
     }
     virtual void generate_comment(std::ostream& os) const;
