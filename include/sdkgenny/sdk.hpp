@@ -185,9 +185,11 @@ protected:
             os << " {\n";
         }
 
+        os << "#define GENNY_PRIVATE(decl) private: decl; public:\n";
         os << "#pragma pack(push, 1)\n";
         obj->generate(os);
         os << "#pragma pack(pop)\n";
+        os << "#undef GENNY_PRIVATE\n";
 
         if (owners.size() > 1 && m_generate_namespaces) {
             os << "}\n";
