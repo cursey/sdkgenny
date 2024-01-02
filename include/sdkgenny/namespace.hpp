@@ -9,6 +9,7 @@ class EnumClass;
 class GenericType;
 class Struct;
 class Type;
+class Template;
 
 class Namespace : public Typename {
 public:
@@ -21,5 +22,6 @@ public:
     Enum* enum_(std::string_view name);
     EnumClass* enum_class(std::string_view name);
     Namespace* namespace_(std::string_view name);
+    Template* template_(std::string_view name);
 };
 } // namespace sdkgenny

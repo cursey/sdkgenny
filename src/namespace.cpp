@@ -3,6 +3,7 @@
 #include <sdkgenny/enum_class.hpp>
 #include <sdkgenny/generic_type.hpp>
 #include <sdkgenny/struct.hpp>
+#include <sdkgenny/template.hpp>
 
 #include <sdkgenny/namespace.hpp>
 
@@ -31,5 +32,8 @@ EnumClass* Namespace::enum_class(std::string_view name) {
 }
 Namespace* Namespace::namespace_(std::string_view name) {
     return find_or_add<Namespace>(name);
+}
+Template* Namespace::template_(std::string_view name) {
+    return find_or_add<Template>(name);
 }
 } // namespace sdkgenny

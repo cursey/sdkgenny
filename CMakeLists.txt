@@ -63,6 +63,7 @@ set(sdkgenny_SOURCES
 	"src/sdk.cpp"
 	"src/static_function.cpp"
 	"src/struct.cpp"
+	"src/template.cpp"
 	"src/type.cpp"
 	"src/typename.cpp"
 	"src/variable.cpp"
@@ -84,6 +85,7 @@ set(sdkgenny_SOURCES
 	"include/sdkgenny/sdk.hpp"
 	"include/sdkgenny/static_function.hpp"
 	"include/sdkgenny/struct.hpp"
+	"include/sdkgenny/template.hpp"
 	"include/sdkgenny/type.hpp"
 	"include/sdkgenny/typename.hpp"
 	"include/sdkgenny/variable.hpp"
@@ -432,4 +434,26 @@ if(SDKGENNY_BUILD_EXAMPLES) # build-examples
 		endif()
 
 	endif()
+endif()
+# Target: example_template
+if(SDKGENNY_BUILD_EXAMPLES) # build-examples
+	set(example_template_SOURCES
+		"examples/template.cpp"
+		cmake.toml
+	)
+
+	add_executable(example_template)
+
+	target_sources(example_template PRIVATE ${example_template_SOURCES})
+	source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${example_template_SOURCES})
+
+	target_link_libraries(example_template PRIVATE
+		sdkgenny
+	)
+
+	get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
+	if(NOT CMKR_VS_STARTUP_PROJECT)
+		set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT example_template)
+	endif()
+
 endif()
