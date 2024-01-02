@@ -15,6 +15,7 @@
 #include <sdkgenny/sdk.hpp>
 #include <sdkgenny/static_function.hpp>
 #include <sdkgenny/struct.hpp>
+#include <sdkgenny/template.hpp>
 #include <sdkgenny/type.hpp>
 #include <sdkgenny/typename.hpp>
 #include <sdkgenny/variable.hpp>
