@@ -18,7 +18,7 @@ Indent::~Indent() {
 
 int Indent::overflow(int ch) {
     if (m_is_at_start_of_line && ch != '\n') {
-        m_dest->sputn(m_indent.data(), m_indent.size());
+        m_dest->sputn(m_indent.data(), static_cast<std::streamsize>(m_indent.size()));
     }
     m_is_at_start_of_line = ch == '\n';
     return m_dest->sputc(static_cast<char>(ch));

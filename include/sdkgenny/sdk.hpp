@@ -116,9 +116,9 @@ protected:
         std::set<std::filesystem::path> includes{};
 
         if (auto s = dynamic_cast<Struct*>(obj)) {
-            auto deps = s->dependencies();
-            types_to_include = deps.hard;
-            types_to_forward_decl = deps.soft;
+            auto [hard, soft] = s->dependencies();
+            types_to_include = hard;
+            types_to_forward_decl = soft;
         }
 
         for (auto&& ty : types_to_include) {
@@ -133,7 +133,7 @@ protected:
             auto owners = type->owners<Namespace>();
 
             if (owners.size() > 1 && m_generate_namespaces) {
-                std::reverse(owners.begin(), owners.end());
+                std::ranges::reverse(owners);
 
                 os << "namespace ";
 
@@ -249,9 +249,9 @@ protected:
         std::unordered_set<Type*> types_to_include{};
 
         if (auto s = dynamic_cast<Struct*>(obj)) {
-            auto deps = s->dependencies();
-            types_to_include = deps.hard;
-            types_to_include.merge(deps.soft);
+            auto [hard, soft] = s->dependencies();
+            types_to_include = hard;
+            types_to_include.merge(soft);
             types_to_include.emplace(s);
         }
 

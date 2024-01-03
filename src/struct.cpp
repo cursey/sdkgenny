@@ -70,7 +70,11 @@ const std::vector<Struct*>& Struct::parents() const {
 }
 
 Struct* Struct::parent(Struct* parent) {
-    if (std::find(m_parents.begin(), m_parents.end(), parent) == m_parents.end()) {
+    if (parent == this) {
+        return this;
+    }
+
+    if (!std::ranges::contains(m_parents, parent)) {
         m_parents.emplace_back(parent);
     }
 
@@ -78,7 +82,7 @@ Struct* Struct::parent(Struct* parent) {
 }
 
 size_t Struct::size() const {
-    size_t size = 0;
+    size_t size{};
 
     for (auto&& parent : m_parents) {
         size += parent->size();
@@ -186,20 +190,20 @@ Struct::Dependencies Struct::dependencies() {
     }
 
     for (auto&& s : get_all<Struct>()) {
-        auto s_deps = s->dependencies();
+        auto [hard, soft] = s->dependencies();
 
-        for (auto&& dep : s_deps.hard) {
+        for (auto&& dep : hard) {
             add_hard_dep(dep);
         }
 
-        for (auto&& dep : s_deps.soft) {
+        for (auto&& dep : soft) {
             add_soft_dep(dep);
         }
     }
 
     // If a type is both a hard and soft dependency, remove it from the soft dependencies.
     for (auto&& dep : deps.hard) {
-        if (deps.soft.find(dep) != deps.soft.end()) {
+        if (deps.soft.contains(dep)) {
             deps.soft.erase(dep);
         }
     }
@@ -225,7 +229,7 @@ int Struct::vtable_size() const {
     }
 
     for (auto&& child : get_all<VirtualFunction>()) {
-        max_index = std::max<int>(max_index, child->vtable_index());
+        max_index = std::max<int>(max_index, static_cast<int>(child->vtable_index()));
     }
 
     return max_index + 1;
@@ -253,7 +257,7 @@ void Struct::generate_inheritance(std::ostream& os) const {
 }
 
 void Struct::generate_bitfield(std::ostream& os, uintptr_t offset) const {
-    uintptr_t last_bit = 0;
+    uintptr_t last_bit{};
     Type* bitfield_type{};
 
     for (auto&& [bit_offset, var] : bitfield(offset)) {
@@ -267,6 +271,10 @@ void Struct::generate_bitfield(std::ostream& os, uintptr_t offset) const {
         var->generate(os);
         last_bit = bit_offset + var->bit_size();
         bitfield_type = var->type();
+    }
+
+    if (bitfield_type == nullptr) {
+        return;
     }
 
     // Fill out the remaining space in the bitfield if necessary.
@@ -307,7 +315,7 @@ void Struct::generate_internal(std::ostream& os) const {
     }
 
     auto max_offset = size();
-    size_t offset = 0;
+    size_t offset{};
 
     // Skip over the vtable.
     if (has_any<VirtualFunction>()) {
@@ -369,7 +377,7 @@ void Struct::generate_internal(std::ostream& os) const {
     }
 
     if (has_any<VirtualFunction>()) {
-        std::unordered_map<int, VirtualFunction*> vtable{};
+        std::unordered_map<uint32_t, VirtualFunction*> vtable{};
 
         for (auto&& child : get_all<VirtualFunction>()) {
             auto vtable_index = child->vtable_index();

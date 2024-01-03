@@ -42,18 +42,17 @@ void Object::generate_comment(std::ostream& os) const {
 std::unique_ptr<Object> Object::remove(Object* obj) {
     obj->m_owner = nullptr;
 
-    if (auto search = std::find_if(m_children.begin(), m_children.end(), [obj](auto&& c) { return c.get() == obj; });
+    if (auto search = std::ranges::find_if(m_children, [obj](auto&& c) { return c.get() == obj; });
         search != m_children.end()) {
         auto p = std::move(*search);
         m_children.erase(search);
         return p;
     }
-    /* m_children.erase(
-        std::remove_if(m_children.begin(), m_children.end(), [obj](auto&& c) { return c.get() == obj; }));*/
+
     return nullptr;
 }
 
-std::filesystem::path Object::path() {
+std::filesystem::path Object::path() const {
     if (m_owner == nullptr) {
         return usable_name();
     }
@@ -61,7 +60,7 @@ std::filesystem::path Object::path() {
     std::filesystem::path p{};
     auto os = owners<Object>();
 
-    std::reverse(os.begin(), os.end());
+    std::ranges::reverse(os);
 
     for (auto&& o : os) {
         if (o->template is_a<Namespace>()) {

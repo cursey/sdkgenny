@@ -73,7 +73,7 @@ void Function::generate_procedure(std::ostream& os) const {
         owners.emplace_back(o);
     }
 
-    std::reverse(owners.begin(), owners.end());
+    std::ranges::reverse(owners);
 
     for (auto&& o : owners) {
         os << o->usable_name() << "::";
