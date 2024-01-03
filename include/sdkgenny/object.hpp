@@ -3,12 +3,12 @@
 #include <algorithm>
 #include <cstring>
 #include <filesystem>
+#include <format>
 #include <functional>
 #include <memory>
 #include <string>
 #include <unordered_set>
 #include <vector>
-#include <format>
 
 namespace sdkgenny {
 class Struct;
@@ -51,29 +51,31 @@ public:
     // Searches for an owner of the correct type.
     template <typename T> const T* owner() const {
         for (auto owner = m_owner; owner != nullptr; owner = owner->m_owner) {
-            if (owner->is_a<T>()) {
-                return (const T*)owner;
+            if (auto o = owner->as<T>()) {
+                return o;
             }
         }
 
         return nullptr;
     }
 
-    template <typename T> T* owner() { return (T*)((const Object*)this)->owner<T>(); }
+    template <typename T> T* owner() { return const_cast<T*>(const_cast<const Object*>(this)->owner<T>()); }
 
     template <typename T> const T* topmost_owner() const {
         const T* topmost{};
 
         for (auto owner = m_owner; owner != nullptr; owner = owner->m_owner) {
-            if (owner->is_a<T>()) {
-                topmost = (const T*)owner;
+            if (auto o = owner->as<const T>()) {
+                topmost = o;
             }
         }
 
         return topmost;
     }
 
-    template <typename T> T* topmost_owner() { return (T*)((const Object*)this)->topmost_owner<T>(); }
+    template <typename T> T* topmost_owner() {
+        return const_cast<T*>(const_cast<const Object*>(this)->topmost_owner<T>());
+    }
 
     auto direct_owner() const { return m_owner; }
 
@@ -81,8 +83,8 @@ public:
         std::vector<T*> owners{};
 
         for (auto owner = m_owner; owner != nullptr; owner = owner->m_owner) {
-            if (owner->is_a<T>()) {
-                owners.emplace_back((T*)owner);
+            if (auto o = owner->as<T>()) {
+                owners.emplace_back(o);
             }
         }
 
@@ -93,8 +95,8 @@ public:
         std::vector<T*> children{};
 
         for (auto&& child : m_children) {
-            if (child->is_a<T>()) {
-                children.emplace_back((T*)child.get());
+            if (auto c = child->as<T>()) {
+                children.emplace_back(c);
             }
         }
 
@@ -102,8 +104,8 @@ public:
     }
 
     template <typename T> void get_all_in_children(std::unordered_set<T*>& objects) const {
-        if (is_a<T>()) {
-            objects.emplace((T*)this);
+        if (auto o = as<T>()) {
+            objects.emplace(const_cast<T*>(o));
         }
 
         for (auto&& child : m_children) {
@@ -112,31 +114,30 @@ public:
     }
 
     template <typename T> bool has_any() const {
-        return std::any_of(
-            m_children.cbegin(), m_children.cend(), [](const auto& child) { return child->template is_a<T>(); });
+        return std::ranges::any_of(m_children, [](const auto& child) { return child->template is_a<T>(); });
     }
 
     template <typename T> bool has_any_in_children() const {
-        return std::any_of(m_children.cbegin(), m_children.cend(),
+        return std::ranges::any_of(m_children,
             [](const auto& child) { return child->template is_a<T>() || child->template has_any_in_children<T>(); });
     }
 
     template <typename T> bool is_child_of(T* obj) const {
-        const auto o = owners<T>();
-        return std::any_of(o.cbegin(), o.cend(), [obj](const auto& owner) { return owner == obj; });
+        auto o = owners<T>();
+        return std::ranges::any_of(o, [obj](const auto& owner) { return owner == obj; });
     }
 
     bool is_direct_child_of(Object* obj) const { return m_owner == obj; }
 
     template <typename T> T* add(std::unique_ptr<T> object) {
         object->m_owner = this;
-        return (T*)m_children.emplace_back(std::move(object)).get();
+        return reinterpret_cast<T*>(m_children.emplace_back(std::move(object)).get());
     }
 
     template <typename T> T* find(std::string_view name) const {
         for (auto&& child : m_children) {
-            if (child->is_a<T>() && child->m_name == name) {
-                return (T*)child.get();
+            if (auto c = child->as<T>(); c != nullptr && c->m_name == name) {
+                return c;
             }
         }
 
@@ -207,7 +208,7 @@ public:
     // The name used when declaring the object (only for types).
     std::function<std::string()> usable_name_decl = usable_name;
 
-    std::filesystem::path path();
+    std::filesystem::path path() const;
 
     auto skip_generation(bool g) {
         m_skip_generation = g;

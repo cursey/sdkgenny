@@ -42,7 +42,7 @@ public:
     Struct* parent(Struct* parent);
 
     size_t size() const override;
-    auto size(int size) {
+    auto size(size_t size) {
         m_size = size;
         return this;
     }

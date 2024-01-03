@@ -21,9 +21,9 @@ Enum* Enum::value(std::string_view name, uint64_t value) {
 size_t Enum::size() const {
     if (m_type == nullptr) {
         return sizeof(int);
-    } else {
-        return m_type->size();
     }
+
+    return m_type->size();
 }
 
 void Enum::generate_forward_decl(std::ostream& os) const {
@@ -50,8 +50,9 @@ void Enum::generate_enums(std::ostream& os) const {
     detail::Indent _{os};
 
     for (auto&& [name, value] : m_values) {
-        if (!m_type || 1ull << (m_type->size() * 8) > value)
+        if (!m_type || 1ull << (m_type->size() * 8) > value) {
             os << name << " = " << value << ",\n";
+        }
     }
 }
 } // namespace sdkgenny

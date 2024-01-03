@@ -13,7 +13,7 @@ Reference* Type::ref() {
 }
 
 Pointer* Type::ptr() {
-    return (Pointer*)m_owner->find_or_add<Pointer>(name() + '*')->to(this);
+    return reinterpret_cast<Pointer*>(m_owner->find_or_add<Pointer>(name() + '*')->to(this));
 }
 
 Array* Type::array_(size_t count) {

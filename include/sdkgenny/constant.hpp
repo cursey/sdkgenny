@@ -1,5 +1,6 @@
 #pragma once
 
+#include <concepts>
 #include <ostream>
 #include <string>
 
@@ -27,12 +28,12 @@ public:
         return this;
     }
 
-    template <typename T, std::enable_if_t<std::is_floating_point_v<T>, bool> = true> auto real(T value) {
+    template <std::floating_point T> auto real(T value) {
         m_value = std::to_string(value);
         return this;
     }
 
-    template <typename T, std::enable_if_t<std::is_integral_v<T>, bool> = true> auto integer(T value) {
+    template <std::integral T> auto integer(T value) {
         m_value = std::to_string(value);
         return this;
     }

@@ -39,14 +39,12 @@ public:
     auto end() const { return offset() + size(); }
 
     auto bit_size(size_t size) {
-        // assert(size <= m_type->size() * CHAR_BIT);
         m_bit_size = size;
         return this;
     }
     auto bit_size() const { return m_bit_size; }
 
     auto bit_offset(uintptr_t offset) {
-        // assert(offset < m_type->size() * CHAR_BIT);
         m_bit_offset = offset;
         return this;
     }

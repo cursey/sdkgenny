@@ -7,7 +7,7 @@ Array::Array(std::string_view name) : Type{name} {
 Array* Array::count(size_t count) {
     // Fix the name of this array type.
     if (m_of != nullptr && count != m_count) {
-        const auto& base = m_of->name();
+        auto& base = m_of->name();
         auto first_brace = base.find_first_of('[');
         auto head = base.substr(0, first_brace);
         std::string tail{};
