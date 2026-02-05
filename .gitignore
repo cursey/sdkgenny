@@ -3,6 +3,5 @@
 .idea
 .DS_Store
 out
-build
 cmake-build-debug
 cmake-build-release

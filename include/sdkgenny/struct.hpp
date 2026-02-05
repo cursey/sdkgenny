@@ -12,18 +12,26 @@
 namespace sdkgenny {
 class Variable;
 class Constant;
+class Constructor;
+class Destructor;
 class Class;
 class Enum;
 class EnumClass;
 class Function;
 class VirtualFunction;
 class StaticFunction;
+class StaticVariable;
 
 class Struct : public Type {
 public:
     explicit Struct(std::string_view name);
-
+    
+    std::string struct_name{};
+    Constructor* constructor();
+    Destructor* destructor();
     Variable* variable(std::string_view name);
+    StaticVariable* static_variable(std::string_view name);
+
     Constant* constant(std::string_view name);
 
     // Returns a map of bit_offset, bitfield_variable at a given offset. Optionally, it will ignore a given variable

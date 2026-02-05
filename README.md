@@ -2,6 +2,10 @@
 
 SdkGenny is a library for generating C++ compatible SDKs for third party applications.
 
+## Fork purpose
+
+The creator of the sdkgenny project did not respond to my issue regarding the inability to generate static members, constructors, and destructors. This fork aims to add these features and introduce improvements, such as the ability to add initializer lists to constructors
+
 ## Installation
 
 This project uses CMake. Just get the `include/` and `src/` dirs integrated into your project in some way. The only dependency is on `PEGTL` which is only necessary if you're using the included parser.

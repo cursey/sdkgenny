@@ -59,10 +59,17 @@ public:
 
     virtual void generate(std::ostream& os) const;
 
+    auto initializer() const { return m_initializer; }
+    auto initializer(std::string_view init) { 
+        m_initializer = std::string(init);
+        return this;
+    }
+
 protected:
     Type* m_type{};
     uintptr_t m_offset{};
     size_t m_bit_size{};
     uintptr_t m_bit_offset{};
+    std::string m_initializer{};
 };
-} // namespace sdkgenny
+}

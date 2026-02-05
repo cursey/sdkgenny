@@ -13,16 +13,31 @@
 #include <sdkgenny/reference.hpp>
 #include <sdkgenny/static_function.hpp>
 #include <sdkgenny/variable.hpp>
+#include <sdkgenny/static_variable.hpp>
 #include <sdkgenny/virtual_function.hpp>
-
+#include <sdkgenny/constructor.hpp>
+#include <sdkgenny/destructor.hpp>
 #include <sdkgenny/struct.hpp>
 
 namespace sdkgenny {
 Struct::Struct(std::string_view name) : Type{name} {
+    struct_name = name; // necessary to generate constructor
+}
+
+Constructor* Struct::constructor() {
+    return find_or_add_unique<Constructor>(struct_name);
+}
+Destructor* Struct::destructor() {
+    return find_or_add_unique<Destructor>('~' + struct_name);
 }
 
 Variable* Struct::variable(std::string_view name) {
     return find_or_add_unique<Variable>(name);
+}
+
+StaticVariable* Struct::static_variable(std::string_view name) {
+    StaticVariable* result = find_or_add_unique<StaticVariable>(name);
+    return result;
 }
 
 Constant* Struct::constant(std::string_view name) {
@@ -359,12 +374,53 @@ void Struct::generate_internal(std::ostream& os) const {
            << "]; public:\n";
     }
 
+    /*
     if (has_any<Function>()) {
         // Generate normal functions normally.
         for (auto&& child : get_all<Function>()) {
             if (!child->is_a<VirtualFunction>()) {
                 child->generate(os);
             }
+        }
+    }*/
+
+    if (has_any<Function>()) {
+        // generating constructors, destructors, normal and static functions in order
+        std::vector<Function*> constructors;
+        std::vector<Function*> destructors;
+        std::vector<Function*> normals;
+        std::vector<Function*> statics;
+
+        for (auto&& child : get_all<Function>()) {
+            if (child->is_a<VirtualFunction>()) {
+                continue; 
+            }
+
+            if (child->is_a<Constructor>()) {
+                constructors.push_back(child);
+            } else if (child->is_a<Destructor>()){
+                destructors.push_back(child);
+            } else if (child->is_a<StaticFunction>()) {
+                statics.push_back(child);
+            } else {
+                normals.push_back(child);
+            }
+        }
+
+        for (auto&& fn : constructors) {
+            fn->generate(os);
+        }
+
+        for (auto&& fn : destructors) {
+            fn->generate(os);
+        }
+
+        for (auto&& fn : normals) {
+            fn->generate(os);
+        }
+
+        for (auto&& fn : statics) {
+            fn->generate(os);
         }
     }
 

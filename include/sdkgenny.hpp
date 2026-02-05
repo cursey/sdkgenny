@@ -18,4 +18,7 @@
 #include <sdkgenny/type.hpp>
 #include <sdkgenny/typename.hpp>
 #include <sdkgenny/variable.hpp>
+#include <sdkgenny/static_variable.hpp>
 #include <sdkgenny/virtual_function.hpp>
+#include <sdkgenny/constructor.hpp>
+#include <sdkgenny/destructor.hpp>
