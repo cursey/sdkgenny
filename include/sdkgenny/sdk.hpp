@@ -14,6 +14,9 @@
 #include <sdkgenny/struct.hpp>
 #include <sdkgenny/type.hpp>
 #include <sdkgenny/virtual_function.hpp>
+#include <sdkgenny/variable.hpp>
+#include <sdkgenny/static_variable.hpp>
+#include <sdkgenny/constructor.hpp>
 
 namespace sdkgenny {
 class Sdk : public Object {
@@ -270,6 +273,40 @@ protected:
             os << "#include \"" << std::filesystem::relative(inc, obj->path().parent_path()).string() << "\"\n";
         }
 
+        
+        // out-of-class definitions
+        if (auto s = dynamic_cast<Struct*>(obj)) {
+            for (auto&& var : s->get_all<StaticVariable>()) {
+                // Type
+                var->type()->generate_typename_for(os, nullptr);
+                os << " ";
+
+                // Qualification with namespace/class
+                std::vector<const Object*> owners{};
+                for (auto o = obj->owner<Object>(); o != nullptr; o = o->owner<Object>()) {
+                    if (o->usable_name().empty())
+                        break;
+                    owners.emplace_back(o);
+                }
+                std::reverse(owners.begin(), owners.end());
+                for (auto&& o : owners) {
+                    os << o->usable_name() << "::";
+                }
+
+                os << obj->usable_name() << "::" << var->usable_name();
+
+                // Arrays, etc.
+                var->type()->generate_variable_postamble(os);
+
+                // writting initializer (out-of-class definitions)
+                if (!var->m_initializer.empty()) {
+                    os << " = " << var->m_initializer;
+                }
+                    
+                os << ";\n";
+            }
+        }
+
         for (auto&& fn : functions) {
             // Skip pure virtual functions.
             if (fn->is_a<VirtualFunction>() && fn->procedure().empty()) {
@@ -297,4 +334,4 @@ protected:
     }
 };
 
-} // namespace sdkgenny
+}

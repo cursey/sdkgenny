@@ -3,6 +3,7 @@
 #include <sdkgenny/struct.hpp>
 
 #include <sdkgenny/variable.hpp>
+#include <sdkgenny/static_variable.hpp>
 
 namespace sdkgenny {
 Variable* Variable::append() {
@@ -89,6 +90,7 @@ Variable* Variable::bit_append() {
     return this;
 }
 
+/* old function
 void Variable::generate(std::ostream& os) const {
     generate_comment(os);
     generate_metadata(os);
@@ -102,4 +104,25 @@ void Variable::generate(std::ostream& os) const {
 
     os << "; // 0x" << std::hex << m_offset << "\n";
 }
-} // namespace sdkgenny
+*/
+
+void Variable::generate(std::ostream& os) const {
+    generate_comment(os);
+    generate_metadata(os);
+
+    m_type->generate_typename_for(os, this);
+    os << " " << usable_name();
+    m_type->generate_variable_postamble(os);
+
+    // For non-static members, we support inline initializers (example: int x = 5)
+    if (!m_initializer.empty()) {
+        os << " = " << m_initializer;
+    }
+
+    if (m_bit_size != 0) {
+        os << " : " << std::dec << m_bit_size;
+    }
+
+    os << "; // 0x" << std::hex << m_offset << "\n";
+}
+} 

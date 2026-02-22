@@ -185,7 +185,7 @@ public:
     // necessary.
     std::function<std::string()> usable_name = [this] {
         std::string name{};
-        constexpr auto allowed_chars = "*&[]:";
+        constexpr auto allowed_chars = "*&[]:~";
 
         for (auto&& c : m_name) {
             auto cc = static_cast<unsigned char>(c);
