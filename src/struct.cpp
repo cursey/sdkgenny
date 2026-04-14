@@ -163,12 +163,20 @@ Struct* Struct::instantiate(const std::vector<Type*>& args) const {
         inst->parent(parent);
     }
 
-    // Clone variables with type substitution
+    // Clone variables with type substitution.
+    // Template variables may have auto-computed offsets that are unreliable because
+    // TemplateParameter types have size 0. Only variables with explicitly pinned offsets
+    // (via @ syntax) are preserved; all others are re-appended from concrete sizes.
     for (auto var : get_all<Variable>()) {
         auto new_type = substitute_type(var->type(), subst);
         auto new_var = inst->variable(var->name());
         new_var->type(new_type);
-        new_var->offset(var->offset());
+
+        if (var->offset_is_explicit()) {
+            new_var->offset(var->offset());
+        } else {
+            new_var->append();
+        }
 
         if (var->is_bitfield()) {
             new_var->bit_size(var->bit_size());
