@@ -722,6 +722,7 @@ template <> struct Action<VarDecl> {
                 var->append();
 
                 if (s.var_delta) {
+                    var->delta(*s.var_delta);
                     var->offset(var->offset() + *s.var_delta);
                 }
             }

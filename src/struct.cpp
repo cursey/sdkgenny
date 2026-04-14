@@ -132,7 +132,14 @@ Struct* Struct::instantiate(const std::vector<Type*>& args) const {
         return existing;
     }
 
-    auto inst = owner->add(std::make_unique<Struct>(inst_name));
+    // Preserve the dynamic type (Class vs Struct)
+    std::unique_ptr<Struct> instantiated;
+    if (dynamic_cast<const Class*>(this) != nullptr) {
+        instantiated = std::make_unique<Class>(inst_name);
+    } else {
+        instantiated = std::make_unique<Struct>(inst_name);
+    }
+    auto inst = owner->add(std::move(instantiated));
 
     // Allow <>, in the usable name
     inst->usable_name = [inst] {
@@ -164,18 +171,29 @@ Struct* Struct::instantiate(const std::vector<Type*>& args) const {
     }
 
     // Clone variables with type substitution.
-    // Template variables may have auto-computed offsets that are unreliable because
-    // TemplateParameter types have size 0. Only variables with explicitly pinned offsets
-    // (via @ syntax) are preserved; all others are re-appended from concrete sizes.
+    // Offsets from the template may be unreliable when computed after a TemplateParameter
+    // field (size 0). We track whether any preceding variable had a size-0 type;
+    // once that happens, all subsequent auto-computed offsets (including + delta) are
+    // tainted and must be re-appended. Only truly pinned @ offsets that appear BEFORE
+    // any size-0 predecessor are preserved.
+    bool offsets_tainted = false;
     for (auto var : get_all<Variable>()) {
+        if (var->type()->size() == 0) {
+            offsets_tainted = true;
+        }
+
         auto new_type = substitute_type(var->type(), subst);
         auto new_var = inst->variable(var->name());
         new_var->type(new_type);
 
-        if (var->offset_is_explicit()) {
+        if (var->offset_is_explicit() && !offsets_tainted) {
             new_var->offset(var->offset());
         } else {
             new_var->append();
+            // Re-apply stored delta (from + N syntax)
+            if (var->delta() > 0) {
+                new_var->offset(new_var->offset() + var->delta());
+            }
         }
 
         if (var->is_bitfield()) {
