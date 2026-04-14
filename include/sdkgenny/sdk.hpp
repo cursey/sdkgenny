@@ -159,6 +159,21 @@ protected:
         }
 
         for (auto&& type : types_to_forward_decl) {
+            // Instantiated template types can't be forward-declared.
+            // Include the template definition header instead.
+            if (type->skip_generation()) {
+                auto tname = type->name();
+                auto pos = tname.find('<');
+                if (pos != std::string::npos) {
+                    auto base_name = tname.substr(0, pos);
+                    if (auto tmpl = type->find_in_owners<Struct>(base_name, false)) {
+                        auto inc_path = tmpl->path() += m_header_extension;
+                        os << "#include \"" << std::filesystem::relative(inc_path, obj->path().parent_path()).string() << "\"\n";
+                    }
+                }
+                continue;
+            }
+
             auto owners = type->owners<Namespace>();
 
             if (owners.size() > 1 && m_generate_namespaces) {

@@ -597,7 +597,12 @@ template <> struct Action<TemplateArgTypeName> {
     template <typename Input> static void apply(const Input& in, State& s) {
         s.template_arg_cur_type = s.lookup<Type>(s.template_arg_type_parts);
         if (s.template_arg_cur_type == nullptr) {
-            throw parse_error{"Can't find template argument type '" + s.template_arg_type_parts.back() + "'", in};
+            std::string full_name;
+            for (size_t i = 0; i < s.template_arg_type_parts.size(); ++i) {
+                if (i != 0) full_name += ".";
+                full_name += s.template_arg_type_parts[i];
+            }
+            throw parse_error{"Can't find template argument type '" + full_name + "'", in};
         }
         s.template_arg_type_parts.clear();
     }

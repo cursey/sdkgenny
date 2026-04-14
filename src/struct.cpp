@@ -165,7 +165,7 @@ Struct* Struct::instantiate(const std::vector<Type*>& args) const {
         inst->size(static_cast<int>(m_size));
     }
 
-    // Copy parents with type substitution
+    // Copy parents as-is.
     for (auto parent : m_parents) {
         inst->parent(parent);
     }
@@ -496,6 +496,7 @@ void Struct::generate_internal(std::ostream& os) const {
             current_offset += parent->size();
         }
 
+        bool has_unknown_size_field = false;
         for (auto&& var : get_all<Variable>()) {
             // Emit padding before variables with explicit @ offsets
             if (var->offset_is_explicit() && var->offset() > current_offset) {
@@ -506,11 +507,16 @@ void Struct::generate_internal(std::ostream& os) const {
             }
 
             var->generate(os);
+            if (var->size() == 0) {
+                has_unknown_size_field = true;
+            }
             current_offset += var->size();
         }
 
-        // Trailing padding to fill explicit struct size
-        if (m_size > current_offset) {
+        // Trailing padding to fill explicit struct size.
+        // Only emit when all field sizes are known — if any field has size 0
+        // (TemplateParameter by value), we can't compute correct padding.
+        if (m_size > current_offset && !has_unknown_size_field) {
             os << "private: char pad_" << std::hex << current_offset
                << "[0x" << std::hex << m_size - current_offset
                << "]; public:\n";
