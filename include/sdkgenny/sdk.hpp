@@ -122,7 +122,36 @@ protected:
         }
 
         for (auto&& ty : types_to_include) {
-            includes.emplace(ty->path() += m_header_extension);
+            // Instantiated template types (skip_generation) don't have their own header.
+            // Include the template definition instead by stripping the <...> suffix.
+            if (ty->skip_generation()) {
+                auto tname = ty->name();
+                auto pos = tname.find('<');
+                if (pos != std::string::npos) {
+                    // Include the template definition header
+                    auto base_name = tname.substr(0, pos);
+                    if (auto tmpl = ty->find_in_owners<Struct>(base_name, false)) {
+                        includes.emplace(tmpl->path() += m_header_extension);
+                    }
+                    // Also include headers for the instantiation's own hard deps
+                    // (the concrete types used as template arguments)
+                    if (auto inst = dynamic_cast<Struct*>(ty)) {
+                        auto inst_deps = inst->dependencies();
+                        for (auto&& dep : inst_deps.hard) {
+                            if (!dep->skip_generation()) {
+                                includes.emplace(dep->path() += m_header_extension);
+                            }
+                        }
+                        for (auto&& dep : inst_deps.soft) {
+                            if (!dep->skip_generation()) {
+                                types_to_forward_decl.emplace(dep);
+                            }
+                        }
+                    }
+                }
+            } else {
+                includes.emplace(ty->path() += m_header_extension);
+            }
         }
 
         for (auto&& inc : includes) {

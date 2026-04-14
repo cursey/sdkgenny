@@ -452,63 +452,90 @@ void Struct::generate_internal(std::ostream& os) const {
         os << "\n";
     }
 
-    std::unordered_map<std::uintptr_t, Variable*> var_map{};
+    // For template structs, emit variables in declaration order.
+    // TemplateParameter types have size 0, so the offset-based padding loop can't work.
+    // We still honor explicit @ offsets by emitting padding before pinned fields.
+    if (is_template()) {
+        size_t current_offset = 0;
 
-    for (auto&& var : get_all<Variable>()) {
-        var_map[var->offset()] = var;
-    }
-
-    auto max_offset = size();
-    size_t offset = 0;
-
-    // Skip over the vtable.
-    if (has_any<VirtualFunction>()) {
-        offset = sizeof(uintptr_t);
-    }
-
-    // Start off where the parent ends.
-    if (!m_parents.empty()) {
-        offset = 0;
-
-        for (auto&& parent : m_parents) {
-            offset += parent->size();
-        }
-    }
-
-    auto last_offset = offset;
-
-    while (offset < max_offset) {
-        if (auto search = var_map.find(offset); search != var_map.end()) {
-            auto var = search->second;
-
-            // Skip variables where the user has not given us a valid size (forgot to set a type or the type is
-            // unfinished).
-            if (var->size() == 0) {
-                ++offset;
-                continue;
-            }
-
-            if (offset - last_offset > 0) {
-                os << "private: char pad_" << std::hex << last_offset << "[0x" << std::hex << offset - last_offset
+        for (auto&& var : get_all<Variable>()) {
+            // Emit padding before variables with explicit @ offsets
+            if (var->offset_is_explicit() && var->offset() > current_offset) {
+                os << "private: char pad_" << std::hex << current_offset
+                   << "[0x" << std::hex << var->offset() - current_offset
                    << "]; public:\n";
+                current_offset = var->offset();
             }
 
-            if (var->is_bitfield()) {
-                generate_bitfield(os, offset);
-            } else {
-                var->generate(os);
-            }
-
-            offset += var->size();
-            last_offset = offset;
-        } else {
-            ++offset;
+            var->generate(os);
+            current_offset += var->size();
         }
-    }
 
-    if (offset - last_offset > 0) {
-        os << "private: char pad_" << std::hex << last_offset << "[0x" << std::hex << offset - last_offset
-           << "]; public:\n";
+        // Trailing padding to fill explicit struct size
+        if (m_size > current_offset) {
+            os << "private: char pad_" << std::hex << current_offset
+               << "[0x" << std::hex << m_size - current_offset
+               << "]; public:\n";
+        }
+    } else {
+        std::unordered_map<std::uintptr_t, Variable*> var_map{};
+
+        for (auto&& var : get_all<Variable>()) {
+            var_map[var->offset()] = var;
+        }
+
+        auto max_offset = size();
+        size_t offset = 0;
+
+        // Skip over the vtable.
+        if (has_any<VirtualFunction>()) {
+            offset = sizeof(uintptr_t);
+        }
+
+        // Start off where the parent ends.
+        if (!m_parents.empty()) {
+            offset = 0;
+
+            for (auto&& parent : m_parents) {
+                offset += parent->size();
+            }
+        }
+
+        auto last_offset = offset;
+
+        while (offset < max_offset) {
+            if (auto search = var_map.find(offset); search != var_map.end()) {
+                auto var = search->second;
+
+                // Skip variables where the user has not given us a valid size (forgot to set a type or the type is
+                // unfinished).
+                if (var->size() == 0) {
+                    ++offset;
+                    continue;
+                }
+
+                if (offset - last_offset > 0) {
+                    os << "private: char pad_" << std::hex << last_offset << "[0x" << std::hex << offset - last_offset
+                       << "]; public:\n";
+                }
+
+                if (var->is_bitfield()) {
+                    generate_bitfield(os, offset);
+                } else {
+                    var->generate(os);
+                }
+
+                offset += var->size();
+                last_offset = offset;
+            } else {
+                ++offset;
+            }
+        }
+
+        if (offset - last_offset > 0) {
+            os << "private: char pad_" << std::hex << last_offset << "[0x" << std::hex << offset - last_offset
+               << "]; public:\n";
+        }
     }
 
     if (has_any<Function>()) {
