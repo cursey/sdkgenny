@@ -218,6 +218,7 @@ Struct* Struct::instantiate(const std::vector<Type*>& args) const {
 
     // Instantiated structs don't generate their own header — the C++ template handles it
     inst->skip_generation(true);
+    inst->m_template_source = const_cast<Struct*>(this);
 
     return inst;
 }

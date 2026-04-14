@@ -47,6 +47,11 @@ public:
     // The instantiated struct is added as a sibling in the same namespace/owner.
     Struct* instantiate(const std::vector<Type*>& args) const;
 
+    // True if this struct was created by instantiate() from a template.
+    bool is_template_instance() const { return m_template_source != nullptr; }
+    // The template definition this struct was instantiated from, or nullptr.
+    Struct* template_source() const { return m_template_source; }
+
     const std::vector<Struct*>& parents() const;
     Struct* parent(Struct* parent);
 
@@ -79,6 +84,7 @@ public:
 protected:
     std::vector<Struct*> m_parents{};
     std::vector<TemplateParameter*> m_template_params{};
+    Struct* m_template_source{};
 
     int vtable_size() const;
 

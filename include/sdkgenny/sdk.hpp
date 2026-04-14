@@ -122,31 +122,24 @@ protected:
         }
 
         for (auto&& ty : types_to_include) {
-            // Instantiated template types (skip_generation) don't have their own header.
-            // Include the template definition instead by stripping the <...> suffix.
-            if (ty->skip_generation()) {
-                auto tname = ty->name();
-                auto pos = tname.find('<');
-                if (pos != std::string::npos) {
-                    // Include the template definition header
-                    auto base_name = tname.substr(0, pos);
-                    if (auto tmpl = ty->find_in_owners<Struct>(base_name, false)) {
-                        includes.emplace(tmpl->path() += m_header_extension);
+            // Instantiated template types don't have their own header.
+            // Include the template definition header and the instantiation's deps.
+            if (auto inst = dynamic_cast<Struct*>(ty); inst && inst->is_template_instance()) {
+                includes.emplace(inst->template_source()->path() += m_header_extension);
+
+                auto inst_deps = inst->dependencies();
+                for (auto&& dep : inst_deps.hard) {
+                    if (auto dep_inst = dynamic_cast<Struct*>(dep); dep_inst && dep_inst->is_template_instance()) {
+                        includes.emplace(dep_inst->template_source()->path() += m_header_extension);
+                    } else {
+                        includes.emplace(dep->path() += m_header_extension);
                     }
-                    // Also include headers for the instantiation's own hard deps
-                    // (the concrete types used as template arguments)
-                    if (auto inst = dynamic_cast<Struct*>(ty)) {
-                        auto inst_deps = inst->dependencies();
-                        for (auto&& dep : inst_deps.hard) {
-                            if (!dep->skip_generation()) {
-                                includes.emplace(dep->path() += m_header_extension);
-                            }
-                        }
-                        for (auto&& dep : inst_deps.soft) {
-                            if (!dep->skip_generation()) {
-                                types_to_forward_decl.emplace(dep);
-                            }
-                        }
+                }
+                for (auto&& dep : inst_deps.soft) {
+                    if (auto dep_inst = dynamic_cast<Struct*>(dep); dep_inst && dep_inst->is_template_instance()) {
+                        includes.emplace(dep_inst->template_source()->path() += m_header_extension);
+                    } else {
+                        types_to_forward_decl.emplace(dep);
                     }
                 }
             } else {
@@ -161,16 +154,9 @@ protected:
         for (auto&& type : types_to_forward_decl) {
             // Instantiated template types can't be forward-declared.
             // Include the template definition header instead.
-            if (type->skip_generation()) {
-                auto tname = type->name();
-                auto pos = tname.find('<');
-                if (pos != std::string::npos) {
-                    auto base_name = tname.substr(0, pos);
-                    if (auto tmpl = type->find_in_owners<Struct>(base_name, false)) {
-                        auto inc_path = tmpl->path() += m_header_extension;
-                        os << "#include \"" << std::filesystem::relative(inc_path, obj->path().parent_path()).string() << "\"\n";
-                    }
-                }
+            if (auto inst = dynamic_cast<Struct*>(type); inst && inst->is_template_instance()) {
+                auto inc_path = inst->template_source()->path() += m_header_extension;
+                os << "#include \"" << std::filesystem::relative(inc_path, obj->path().parent_path()).string() << "\"\n";
                 continue;
             }
 
