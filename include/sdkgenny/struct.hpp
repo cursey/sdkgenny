@@ -18,6 +18,7 @@ class EnumClass;
 class Function;
 class VirtualFunction;
 class StaticFunction;
+class TemplateParameter;
 
 class Struct : public Type {
 public:
@@ -37,6 +38,14 @@ public:
     Function* function(std::string_view name);
     VirtualFunction* virtual_function(std::string_view name);
     StaticFunction* static_function(std::string_view name);
+
+    TemplateParameter* template_parameter(std::string_view name);
+    const std::vector<TemplateParameter*>& template_parameters() const;
+    bool is_template() const;
+
+    // Creates a concrete struct by substituting template parameters with the given types.
+    // The instantiated struct is added as a sibling in the same namespace/owner.
+    Struct* instantiate(const std::vector<Type*>& args) const;
 
     const std::vector<Struct*>& parents() const;
     Struct* parent(Struct* parent);
@@ -69,6 +78,7 @@ public:
 
 protected:
     std::vector<Struct*> m_parents{};
+    std::vector<TemplateParameter*> m_template_params{};
 
     int vtable_size() const;
 

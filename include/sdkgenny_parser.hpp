@@ -67,6 +67,22 @@ struct EnumDecl
     : seq<EnumId, Seps, opt<EnumClassId>, Seps, EnumName, Seps, opt<one<':'>, Seps, EnumType>, Seps, one<'{'>> {};
 struct EnumExpr : if_must<EnumDecl, Seps, EnumVals, Seps, one<'}'>, Endl> {};
 
+// Template declaration: template <typename T, typename U>
+struct TemplateId : TAO_PEGTL_STRING("template") {};
+struct TemplateTypenameId : TAO_PEGTL_STRING("typename") {};
+struct TemplateParamName : identifier {};
+struct TemplateParam : seq<TemplateTypenameId, Seps, TemplateParamName> {};
+struct TemplateParamList : list_must<TemplateParam, one<','>, Sep> {};
+struct TemplateDecl : if_must<TemplateId, Seps, one<'<'>, Seps, TemplateParamList, Seps, one<'>'>> {};
+
+// Template arguments in type positions: Foo<int, float*>
+struct TemplateArgTypePart : identifier {};
+struct TemplateArgTypeName : list_must<TemplateArgTypePart, one<'.'>> {};
+struct TemplateArgTypePtr : one<'*'> {};
+struct TemplateArgType : seq<TemplateArgTypeName, Seps, star<TemplateArgTypePtr>> {};
+struct TemplateArgList : list_must<TemplateArgType, one<','>, Sep> {};
+struct TemplateArgs : if_must<one<'<'>, Seps, TemplateArgList, Seps, one<'>'>> {};
+
 struct StructPrivacyId : sor<TAO_PEGTL_STRING("public"), TAO_PEGTL_STRING("private"), TAO_PEGTL_STRING("protected")> {};
 struct StructId : sor<TAO_PEGTL_STRING("struct"), TAO_PEGTL_STRING("class")> {};
 struct StructName : identifier {};
@@ -76,7 +92,7 @@ struct StructParentList : list<StructParent, one<','>, Sep> {};
 struct StructParentListDecl : seq<one<':'>, Seps, StructParentList> {};
 struct StructSize : Num {};
 struct StructDecl
-    : seq<StructId, Seps, StructName, Seps, opt<StructParentListDecl>, Seps, opt<StructSize>, Seps, one<'{'>> {};
+    : seq<opt<TemplateDecl>, Seps, StructId, Seps, StructName, Seps, opt<StructParentListDecl>, Seps, opt<StructSize>, Seps, one<'{'>> {};
 struct StructPrivacyDecl : disable<StructPrivacyId, Seps, one<':'>> {};
 struct StructExpr;
 struct FnDecl;
@@ -91,7 +107,7 @@ struct VarTypeArrayCount : Num {};
 struct VarTypeArray : if_must<one<'['>, VarTypeArrayCount, one<']'>> {};
 struct VarTypeHintId : sor<TAO_PEGTL_STRING("struct"), TAO_PEGTL_STRING("class"), TAO_PEGTL_STRING("enum class"),
                            TAO_PEGTL_STRING("enum")> {};
-struct VarType : seq<opt<VarTypeHintId>, Seps, VarTypeName, Seps, star<VarTypePtr>, star<VarTypeArray>> {};
+struct VarType : seq<opt<VarTypeHintId>, Seps, VarTypeName, Seps, opt<TemplateArgs>, Seps, star<VarTypePtr>, star<VarTypeArray>> {};
 struct VarName : identifier {};
 struct VarOffset : Num {};
 struct VarOffsetDecl : if_must<one<'@'>, Seps, VarOffset> {};
@@ -155,6 +171,14 @@ struct State {
     std::vector<sdkgenny::Struct*> struct_parents{};
     std::optional<size_t> struct_size{};
     bool struct_is_class{};
+
+    // Template parameters for current template declaration
+    std::vector<std::string> template_param_names{};
+
+    // Template arguments being parsed for an instantiation
+    std::vector<std::string> template_arg_type_parts{};
+    std::vector<Type*> template_args{};
+    Type* template_arg_cur_type{};
 
     sdkgenny::Type* cur_type{};
     std::string var_type_hint{};
@@ -463,6 +487,12 @@ template <> struct Action<StructSize> {
     }
 };
 
+template <> struct Action<TemplateParamName> {
+    template <typename Input> static void apply(const Input& in, State& s) {
+        s.template_param_names.emplace_back(in.string_view());
+    }
+};
+
 template <> struct Action<StructDecl> {
     template <typename Input> static void apply(const Input& in, State& s) {
         Struct* struct_{};
@@ -490,6 +520,11 @@ template <> struct Action<StructDecl> {
         if (s.struct_size) {
             struct_->size(*s.struct_size);
         }
+        // Create template parameters if this is a template struct
+        for (auto&& param_name : s.template_param_names) {
+            struct_->template_parameter(param_name);
+        }
+        s.template_param_names.clear();
 
         s.parents.push_back(struct_);
         s.struct_name.clear();
@@ -541,6 +576,61 @@ template <> struct Action<VarTypeName> {
 
         s.var_type.clear();
         s.var_type_array_counts.clear();
+    }
+};
+
+template <> struct Action<TemplateArgTypePart> {
+    template <typename Input> static void apply(const Input& in, State& s) {
+        s.template_arg_type_parts.emplace_back(in.string_view());
+    }
+};
+
+template <> struct Action<TemplateArgTypePtr> {
+    template <typename Input> static void apply(const Input& in, State& s) {
+        if (s.template_arg_cur_type) {
+            s.template_arg_cur_type = s.template_arg_cur_type->ptr();
+        }
+    }
+};
+
+template <> struct Action<TemplateArgTypeName> {
+    template <typename Input> static void apply(const Input& in, State& s) {
+        s.template_arg_cur_type = s.lookup<Type>(s.template_arg_type_parts);
+        if (s.template_arg_cur_type == nullptr) {
+            throw parse_error{"Can't find template argument type '" + s.template_arg_type_parts.back() + "'", in};
+        }
+        s.template_arg_type_parts.clear();
+    }
+};
+
+template <> struct Action<TemplateArgType> {
+    template <typename Input> static void apply(const Input& in, State& s) {
+        if (s.template_arg_cur_type) {
+            s.template_args.emplace_back(s.template_arg_cur_type);
+            s.template_arg_cur_type = nullptr;
+        }
+    }
+};
+
+template <> struct Action<TemplateArgs> {
+    template <typename Input> static void apply(const Input& in, State& s) {
+        // After template args are fully parsed, instantiate the template
+        if (s.cur_type == nullptr) {
+            throw parse_error{"Template arguments found but base type is null", in};
+        }
+
+        auto struct_type = dynamic_cast<Struct*>(s.cur_type);
+        if (struct_type == nullptr || !struct_type->is_template()) {
+            throw parse_error{"Template arguments can only be applied to a template struct", in};
+        }
+
+        auto instantiated = struct_type->instantiate(s.template_args);
+        if (instantiated == nullptr) {
+            throw parse_error{"Template instantiation failed (wrong number of arguments?)", in};
+        }
+
+        s.cur_type = instantiated;
+        s.template_args.clear();
     }
 };
 
