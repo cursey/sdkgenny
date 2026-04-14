@@ -173,15 +173,10 @@ Struct* Struct::instantiate(const std::vector<Type*>& args) const {
     // Clone variables with type substitution.
     // Offsets from the template may be unreliable when computed after a TemplateParameter
     // field (size 0). We track whether any preceding variable had a size-0 type;
-    // once that happens, all subsequent auto-computed offsets (including + delta) are
-    // tainted and must be re-appended. Only truly pinned @ offsets that appear BEFORE
-    // any size-0 predecessor are preserved.
+    // once that happens, auto-computed offsets (append / + delta) are tainted.
+    // Explicitly pinned @ offsets are always preserved regardless of taint.
     bool offsets_tainted = false;
     for (auto var : get_all<Variable>()) {
-        if (var->type()->size() == 0) {
-            offsets_tainted = true;
-        }
-
         auto new_type = substitute_type(var->type(), subst);
         auto new_var = inst->variable(var->name());
         new_var->type(new_type);
@@ -194,6 +189,10 @@ Struct* Struct::instantiate(const std::vector<Type*>& args) const {
         }
 
         if (var->offset_is_explicit() && !offsets_tainted) {
+            // Offset was set via @ or + delta before any size-0 field — safe to copy.
+            new_var->offset(var->offset());
+        } else if (var->offset_is_explicit() && offsets_tainted && var->delta() == 0) {
+            // Explicitly pinned via @ (not + delta) — always preserve.
             new_var->offset(var->offset());
         } else {
             new_var->append();
@@ -209,6 +208,11 @@ Struct* Struct::instantiate(const std::vector<Type*>& args) const {
 
         if (!var->metadata().empty()) {
             new_var->metadata() = var->metadata();
+        }
+
+        // Mark taint AFTER processing this variable, so it only affects successors.
+        if (var->type()->size() == 0) {
+            offsets_tainted = true;
         }
     }
 
@@ -481,6 +485,16 @@ void Struct::generate_internal(std::ostream& os) const {
     // We still honor explicit @ offsets by emitting padding before pinned fields.
     if (is_template()) {
         size_t current_offset = 0;
+
+        // Account for vtable pointer if this template has virtual functions.
+        if (has_any<VirtualFunction>()) {
+            current_offset = sizeof(uintptr_t);
+        }
+
+        // Account for parent sizes.
+        for (auto&& parent : m_parents) {
+            current_offset += parent->size();
+        }
 
         for (auto&& var : get_all<Variable>()) {
             // Emit padding before variables with explicit @ offsets
