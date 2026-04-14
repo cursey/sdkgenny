@@ -186,6 +186,13 @@ Struct* Struct::instantiate(const std::vector<Type*>& args) const {
         auto new_var = inst->variable(var->name());
         new_var->type(new_type);
 
+        // Set bitfield info BEFORE offset calculation so append() can group
+        // bitfields into the same storage unit.
+        if (var->is_bitfield()) {
+            new_var->bit_size(var->bit_size());
+            new_var->bit_offset(var->bit_offset());
+        }
+
         if (var->offset_is_explicit() && !offsets_tainted) {
             new_var->offset(var->offset());
         } else {
@@ -194,11 +201,10 @@ Struct* Struct::instantiate(const std::vector<Type*>& args) const {
             if (var->delta() > 0) {
                 new_var->offset(new_var->offset() + var->delta());
             }
-        }
 
-        if (var->is_bitfield()) {
-            new_var->bit_size(var->bit_size());
-            new_var->bit_offset(var->bit_offset());
+            if (var->is_bitfield()) {
+                new_var->bit_append();
+            }
         }
 
         if (!var->metadata().empty()) {
