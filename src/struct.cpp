@@ -505,11 +505,15 @@ void Struct::generate_internal(std::ostream& os) const {
 
         bool has_unknown_size_field = false;
         for (auto&& var : get_all<Variable>()) {
-            // Emit padding before variables with explicit @ offsets
-            if (var->offset_is_explicit() && var->offset() > current_offset) {
+            // Emit padding before variables with explicit @ offsets,
+            // but only if we haven't seen a size-0 field — after one, we can't
+            // compute correct padding since T's size is unknown.
+            if (var->offset_is_explicit() && var->offset() > current_offset && !has_unknown_size_field) {
                 os << "private: char pad_" << std::hex << current_offset
                    << "[0x" << std::hex << var->offset() - current_offset
                    << "]; public:\n";
+                current_offset = var->offset();
+            } else if (var->offset_is_explicit()) {
                 current_offset = var->offset();
             }
 
