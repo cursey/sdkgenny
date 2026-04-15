@@ -147,18 +147,22 @@ protected:
             }
         }
 
+        // Collect template instance soft deps into includes (not forward-declared).
+        // Done before emitting includes so they're grouped and deduped.
+        std::unordered_set<Type*> fwd_decl_filtered{};
+        for (auto&& type : types_to_forward_decl) {
+            if (auto inst = dynamic_cast<Struct*>(type); inst && inst->is_template_instance()) {
+                includes.emplace(inst->template_source()->path() += m_header_extension);
+            } else {
+                fwd_decl_filtered.emplace(type);
+            }
+        }
+
         for (auto&& inc : includes) {
             os << "#include \"" << std::filesystem::relative(inc, obj->path().parent_path()).string() << "\"\n";
         }
 
-        for (auto&& type : types_to_forward_decl) {
-            // Instantiated template types can't be forward-declared.
-            // Include the template definition header instead.
-            if (auto inst = dynamic_cast<Struct*>(type); inst && inst->is_template_instance()) {
-                auto inc_path = inst->template_source()->path() += m_header_extension;
-                os << "#include \"" << std::filesystem::relative(inc_path, obj->path().parent_path()).string() << "\"\n";
-                continue;
-            }
+        for (auto&& type : fwd_decl_filtered) {
 
             auto owners = type->owners<Namespace>();
 
