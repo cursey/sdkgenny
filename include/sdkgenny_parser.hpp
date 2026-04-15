@@ -626,7 +626,7 @@ template <> struct Action<TemplateArgs> {
 
         auto struct_type = dynamic_cast<Struct*>(s.cur_type);
         if (struct_type == nullptr || !struct_type->is_template()) {
-            throw parse_error{"Template arguments can only be applied to a template struct", in};
+            throw parse_error{"Template arguments can only be applied to a template struct/class", in};
         }
 
         auto instantiated = struct_type->instantiate(s.template_args);

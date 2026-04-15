@@ -524,7 +524,14 @@ void Struct::generate_internal(std::ostream& os) const {
             // Emit padding before variables with explicit @ offsets,
             // but only if we haven't seen a size-0 field — after one, we can't
             // compute correct padding since T's size is unknown.
-            if (var->offset_is_explicit() && var->offset() > current_offset && !has_unknown_size_field) {
+            // However, + delta padding is a fixed constant independent of T's size,
+            // so it's always safe to emit.
+            if (var->has_delta() && var->delta() > 0) {
+                os << "private: char pad_" << std::hex << current_offset
+                   << "[0x" << std::hex << var->delta()
+                   << "]; public:\n";
+                current_offset += var->delta();
+            } else if (var->offset_is_explicit() && var->offset() > current_offset && !has_unknown_size_field) {
                 os << "private: char pad_" << std::hex << current_offset
                    << "[0x" << std::hex << var->offset() - current_offset
                    << "]; public:\n";
