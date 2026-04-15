@@ -517,7 +517,12 @@ void Struct::generate_internal(std::ostream& os) const {
             if (var->size() == 0) {
                 has_unknown_size_field = true;
             }
-            current_offset += var->size();
+            // Use end() (offset + size) with max to handle bitfields sharing a storage
+            // unit — multiple bitfields at the same offset won't over-advance past it.
+            auto var_end = var->offset() + var->size();
+            if (var_end > current_offset) {
+                current_offset = var_end;
+            }
         }
 
         // Trailing padding to fill explicit struct size.
