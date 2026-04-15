@@ -536,7 +536,7 @@ void Struct::generate_internal(std::ostream& os) const {
                    << "[0x" << std::hex << var->offset() - current_offset
                    << "]; public:\n";
                 current_offset = var->offset();
-            } else if (var->offset_is_explicit()) {
+            } else if (var->offset_is_explicit() && var->offset() > current_offset) {
                 current_offset = var->offset();
             }
 
