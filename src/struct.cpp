@@ -1,4 +1,5 @@
 #include <climits>
+#include <sstream>
 #include <unordered_map>
 
 #include <sdkgenny/array.hpp>
@@ -115,11 +116,15 @@ Struct* Struct::instantiate(const std::vector<Type*>& args) const {
         subst[m_template_params[i]] = args[i];
     }
 
-    // Build instantiated name: "Foo<int, float*>"
+    // Build instantiated name: "Foo<ns::Type, float*>"
+    // Use generate_typename_for to get fully-qualified names for args,
+    // avoiding collisions between types with the same leaf name in different namespaces.
     std::string inst_name = std::string{name()} + "<";
     for (size_t i = 0; i < args.size(); ++i) {
         if (i > 0) inst_name += ", ";
-        inst_name += args[i]->name();
+        std::ostringstream ss;
+        args[i]->generate_typename_for(ss, nullptr);
+        inst_name += ss.str();
     }
     inst_name += ">";
 
