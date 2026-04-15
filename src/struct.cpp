@@ -1,4 +1,6 @@
+#include <cctype>
 #include <climits>
+#include <cstring>
 #include <sstream>
 #include <unordered_map>
 
@@ -196,13 +198,13 @@ Struct* Struct::instantiate(const std::vector<Type*>& args) const {
         if (var->offset_is_explicit() && !offsets_tainted) {
             // Offset was set via @ or + delta before any size-0 field — safe to copy.
             new_var->offset(var->offset());
-        } else if (var->offset_is_explicit() && offsets_tainted && var->delta() == 0) {
+        } else if (var->offset_is_explicit() && offsets_tainted && !var->has_delta()) {
             // Explicitly pinned via @ (not + delta) — always preserve.
             new_var->offset(var->offset());
         } else {
             new_var->append();
             // Re-apply stored delta (from + N syntax)
-            if (var->delta() > 0) {
+            if (var->has_delta()) {
                 new_var->offset(new_var->offset() + var->delta());
             }
 
@@ -225,11 +227,11 @@ Struct* Struct::instantiate(const std::vector<Type*>& args) const {
         }
 
         // Copy delta so downstream tooling can distinguish @ pins from + delta (Comment 18)
-        if (var->delta() > 0) {
+        if (var->has_delta()) {
             new_var->delta(var->delta());
         }
         // Mark taint AFTER processing this variable, so it only affects successors.
-        if (var->type()->size() == 0) {
+        if (var->size() == 0) {
             offsets_tainted = true;
         }
     }
