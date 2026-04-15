@@ -153,7 +153,7 @@ Struct* Struct::instantiate(const std::vector<Type*>& args) const {
                 result += c;
             }
         }
-        if (!result.empty() && isdigit(result[0])) {
+        if (!result.empty() && std::isdigit(static_cast<unsigned char>(result[0]))) {
             result = "_" + result;
         }
         return result;
@@ -487,14 +487,15 @@ void Struct::generate_internal(std::ostream& os) const {
     if (is_template()) {
         size_t current_offset = 0;
 
-        // Account for vtable pointer if this template has virtual functions.
-        if (has_any<VirtualFunction>()) {
+        // Account for vtable pointer and parent sizes.
+        // Mirror the non-template path: if parents exist, use parent sizes only
+        // (parent size already includes vtable pointer). Otherwise use vtable size.
+        if (!m_parents.empty()) {
+            for (auto&& parent : m_parents) {
+                current_offset += parent->size();
+            }
+        } else if (has_any<VirtualFunction>()) {
             current_offset = sizeof(uintptr_t);
-        }
-
-        // Account for parent sizes.
-        for (auto&& parent : m_parents) {
-            current_offset += parent->size();
         }
 
         bool has_unknown_size_field = false;
