@@ -297,7 +297,13 @@ protected:
         std::set<std::filesystem::path> includes{};
 
         for (auto&& ty : types_to_include) {
-            includes.emplace(ty->path() += m_header_extension);
+            // Mirror generate_header: template instances don't have their own header;
+            // include the template definition header instead (Comment 19).
+            if (auto inst = dynamic_cast<Struct*>(ty); inst && inst->is_template_instance()) {
+                includes.emplace(inst->template_source()->path() += m_header_extension);
+            } else {
+                includes.emplace(ty->path() += m_header_extension);
+            }
         }
 
         for (auto&& inc : includes) {

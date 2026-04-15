@@ -215,6 +215,19 @@ Struct* Struct::instantiate(const std::vector<Type*>& args) const {
             new_var->metadata() = var->metadata();
         }
 
+        // Copy comment (Comment 17).
+        // comment() getter returns m_comment with trailing \n from setter;
+        // strip before re-setting to avoid double \n.
+        if (!var->comment().empty()) {
+            auto c = var->comment();
+            while (!c.empty() && c.back() == '\n') c.pop_back();
+            if (!c.empty()) new_var->comment("{}", c);
+        }
+
+        // Copy delta so downstream tooling can distinguish @ pins from + delta (Comment 18)
+        if (var->delta() > 0) {
+            new_var->delta(var->delta());
+        }
         // Mark taint AFTER processing this variable, so it only affects successors.
         if (var->type()->size() == 0) {
             offsets_tainted = true;
