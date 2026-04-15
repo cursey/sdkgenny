@@ -28,8 +28,18 @@ public:
     auto offset() const { return m_offset; }
     auto offset(uintptr_t offset) {
         m_offset = offset;
+        m_offset_is_explicit = true;
         return this;
     }
+    auto offset_is_explicit() const { return m_offset_is_explicit; }
+
+    auto delta() const { return m_delta; }
+    auto delta(uintptr_t d) {
+        m_delta = d;
+        m_has_delta = true;
+        return this;
+    }
+    auto has_delta() const { return m_has_delta; }
 
     // Sets the offset to be after the last variable in the struct.
     Variable* append();
@@ -62,6 +72,9 @@ public:
 protected:
     Type* m_type{};
     uintptr_t m_offset{};
+    bool m_offset_is_explicit{};
+    uintptr_t m_delta{};
+    bool m_has_delta{};
     size_t m_bit_size{};
     uintptr_t m_bit_offset{};
 };

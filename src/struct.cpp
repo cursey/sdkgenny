@@ -1,4 +1,7 @@
+#include <cctype>
 #include <climits>
+#include <cstring>
+#include <sstream>
 #include <unordered_map>
 
 #include <sdkgenny/array.hpp>
@@ -14,6 +17,8 @@
 #include <sdkgenny/static_function.hpp>
 #include <sdkgenny/variable.hpp>
 #include <sdkgenny/virtual_function.hpp>
+#include <sdkgenny/pointer.hpp>
+#include <sdkgenny/template_parameter.hpp>
 
 #include <sdkgenny/struct.hpp>
 
@@ -65,6 +70,179 @@ StaticFunction* Struct::static_function(std::string_view name) {
     return find_or_add<StaticFunction>(name);
 }
 
+TemplateParameter* Struct::template_parameter(std::string_view name) {
+    if (auto existing = find<TemplateParameter>(name)) {
+        return existing;
+    }
+    auto param = add(std::make_unique<TemplateParameter>(name));
+    m_template_params.emplace_back(param);
+    return param;
+}
+
+const std::vector<TemplateParameter*>& Struct::template_parameters() const {
+    return m_template_params;
+}
+
+bool Struct::is_template() const {
+    return !m_template_params.empty();
+}
+
+static Type* substitute_type(Type* type, const std::unordered_map<TemplateParameter*, Type*>& subst) {
+    if (auto tp = dynamic_cast<TemplateParameter*>(type)) {
+        auto it = subst.find(tp);
+        return it != subst.end() ? it->second : type;
+    }
+    if (auto ptr = dynamic_cast<Pointer*>(type)) {
+        auto new_to = substitute_type(ptr->to(), subst);
+        return new_to != ptr->to() ? new_to->ptr() : type;
+    }
+    if (auto ref = dynamic_cast<Reference*>(type)) {
+        auto new_to = substitute_type(ref->to(), subst);
+        return new_to != ref->to() ? new_to->ref() : type;
+    }
+    if (auto arr = dynamic_cast<Array*>(type)) {
+        auto new_of = substitute_type(arr->of(), subst);
+        return new_of != arr->of() ? new_of->array_(arr->count()) : type;
+    }
+    return type;
+}
+
+Struct* Struct::instantiate(const std::vector<Type*>& args) {
+    if (args.size() != m_template_params.size()) {
+        return nullptr;
+    }
+
+    // Build substitution map
+    std::unordered_map<TemplateParameter*, Type*> subst;
+    for (size_t i = 0; i < m_template_params.size(); ++i) {
+        subst[m_template_params[i]] = args[i];
+    }
+
+    // Build instantiated name: "Foo<ns::Type, float*>"
+    // Use generate_typename_for to get fully-qualified names for args,
+    // avoiding collisions between types with the same leaf name in different namespaces.
+    std::string inst_name = std::string{name()} + "<";
+    for (size_t i = 0; i < args.size(); ++i) {
+        if (i > 0) inst_name += ", ";
+        std::ostringstream ss;
+        args[i]->generate_typename_for(ss, nullptr);
+        inst_name += ss.str();
+    }
+    inst_name += ">";
+
+    // Create the instantiated struct in the same owner
+    auto owner = m_owner;
+    if (!owner) return nullptr;
+
+    // Check if already instantiated
+    if (auto existing = owner->find<Struct>(inst_name)) {
+        return existing;
+    }
+
+    // Preserve the dynamic type (Class vs Struct)
+    std::unique_ptr<Struct> instantiated;
+    if (dynamic_cast<const Class*>(this) != nullptr) {
+        instantiated = std::make_unique<Class>(inst_name);
+    } else {
+        instantiated = std::make_unique<Struct>(inst_name);
+    }
+    auto inst = owner->add(std::move(instantiated));
+
+    // Allow <>, in the usable name
+    inst->usable_name = [inst] {
+        std::string result{};
+        constexpr auto allowed_chars = "*&[]:,<> ";
+        for (auto&& c : inst->name()) {
+            auto cc = static_cast<unsigned char>(c);
+            if (!std::isalnum(cc) && std::strchr(allowed_chars, cc) == nullptr) {
+                result += '_';
+            } else {
+                result += c;
+            }
+        }
+        if (!result.empty() && std::isdigit(static_cast<unsigned char>(result[0]))) {
+            result = "_" + result;
+        }
+        return result;
+    };
+    inst->usable_name_decl = inst->usable_name;
+
+    // Copy explicit size
+    if (m_size > 0) {
+        inst->size(static_cast<int>(m_size));
+    }
+
+    // Copy parents as-is.
+    for (auto parent : m_parents) {
+        inst->parent(parent);
+    }
+
+    // Clone variables with type substitution.
+    // Offsets from the template may be unreliable when computed after a TemplateParameter
+    // field (size 0). We track whether any preceding variable had a size-0 type;
+    // once that happens, auto-computed offsets (append / + delta) are tainted.
+    // Explicitly pinned @ offsets are always preserved regardless of taint.
+    bool offsets_tainted = false;
+    for (auto var : get_all<Variable>()) {
+        auto new_type = substitute_type(var->type(), subst);
+        auto new_var = inst->variable(var->name());
+        new_var->type(new_type);
+
+        // Set bitfield info BEFORE offset calculation so append() can group
+        // bitfields into the same storage unit.
+        if (var->is_bitfield()) {
+            new_var->bit_size(var->bit_size());
+            new_var->bit_offset(var->bit_offset());
+        }
+
+        if (var->offset_is_explicit() && !offsets_tainted) {
+            // Offset was set via @ or + delta before any size-0 field — safe to copy.
+            new_var->offset(var->offset());
+        } else if (var->offset_is_explicit() && offsets_tainted && !var->has_delta()) {
+            // Explicitly pinned via @ (not + delta) — always preserve.
+            new_var->offset(var->offset());
+        } else {
+            new_var->append();
+            // Re-apply stored delta (from + N syntax)
+            if (var->has_delta()) {
+                new_var->offset(new_var->offset() + var->delta());
+            }
+
+            if (var->is_bitfield()) {
+                new_var->bit_append();
+            }
+        }
+
+        if (!var->metadata().empty()) {
+            new_var->metadata() = var->metadata();
+        }
+
+        // Copy comment (Comment 17).
+        // comment() getter returns m_comment with trailing \n from setter;
+        // strip before re-setting to avoid double \n.
+        if (!var->comment().empty()) {
+            auto c = var->comment();
+            while (!c.empty() && c.back() == '\n') c.pop_back();
+            if (!c.empty()) new_var->comment("{}", c);
+        }
+
+        // Copy delta so downstream tooling can distinguish @ pins from + delta (Comment 18)
+        if (var->has_delta()) {
+            new_var->delta(var->delta());
+        }
+        // Mark taint AFTER processing this variable, so it only affects successors.
+        if (var->size() == 0) {
+            offsets_tainted = true;
+        }
+    }
+
+    // Instantiated structs don't generate their own header — the C++ template handles it
+    inst->skip_generation(true);
+    inst->m_template_source = this;
+
+    return inst;
+}
+
 const std::vector<Struct*>& Struct::parents() const {
     return m_parents;
 }
@@ -100,12 +278,35 @@ size_t Struct::size() const {
 }
 
 void Struct::generate_forward_decl(std::ostream& os) const {
+    if (is_template()) {
+        os << "template<";
+        bool first = true;
+        for (auto param : m_template_params) {
+            if (!first) os << ", ";
+            first = false;
+            os << "typename " << param->name();
+        }
+        os << "> ";
+    }
     os << "struct " << usable_name_decl() << ";\n";
 }
 
 void Struct::generate(std::ostream& os) const {
     generate_comment(os);
     generate_metadata(os);
+
+    // Emit template parameter list if this is a template struct
+    if (is_template()) {
+        os << "template<";
+        bool first = true;
+        for (auto param : m_template_params) {
+            if (!first) os << ", ";
+            first = false;
+            os << "typename " << param->name();
+        }
+        os << ">\n";
+    }
+
     os << "struct " << usable_name_decl();
     generate_inheritance(os);
     os << " {\n";
@@ -300,63 +501,134 @@ void Struct::generate_internal(std::ostream& os) const {
         os << "\n";
     }
 
-    std::unordered_map<std::uintptr_t, Variable*> var_map{};
+    // For template structs, emit variables in declaration order.
+    // TemplateParameter types have size 0, so the offset-based padding loop can't work.
+    // We still honor explicit @ offsets by emitting padding before pinned fields.
+    if (is_template()) {
+        size_t current_offset = 0;
 
-    for (auto&& var : get_all<Variable>()) {
-        var_map[var->offset()] = var;
-    }
-
-    auto max_offset = size();
-    size_t offset = 0;
-
-    // Skip over the vtable.
-    if (has_any<VirtualFunction>()) {
-        offset = sizeof(uintptr_t);
-    }
-
-    // Start off where the parent ends.
-    if (!m_parents.empty()) {
-        offset = 0;
-
-        for (auto&& parent : m_parents) {
-            offset += parent->size();
-        }
-    }
-
-    auto last_offset = offset;
-
-    while (offset < max_offset) {
-        if (auto search = var_map.find(offset); search != var_map.end()) {
-            auto var = search->second;
-
-            // Skip variables where the user has not given us a valid size (forgot to set a type or the type is
-            // unfinished).
-            if (var->size() == 0) {
-                ++offset;
-                continue;
+        // Account for vtable pointer and parent sizes.
+        // Mirror the non-template path: if parents exist, use parent sizes only
+        // (parent size already includes vtable pointer). Otherwise use vtable size.
+        if (!m_parents.empty()) {
+            for (auto&& parent : m_parents) {
+                current_offset += parent->size();
             }
+        } else if (has_any<VirtualFunction>()) {
+            current_offset = sizeof(uintptr_t);
+        }
 
-            if (offset - last_offset > 0) {
-                os << "private: char pad_" << std::hex << last_offset << "[0x" << std::hex << offset - last_offset
+        bool has_unknown_size_field = false;
+        std::unordered_set<uintptr_t> emitted_bitfield_offsets{};
+        for (auto&& var : get_all<Variable>()) {
+            // Emit padding before variables with explicit @ offsets,
+            // but only if we haven't seen a size-0 field — after one, we can't
+            // compute correct padding since T's size is unknown.
+            // However, + delta padding is a fixed constant independent of T's size,
+            // so it's always safe to emit.
+            if (var->has_delta() && var->delta() > 0) {
+                os << "private: char pad_" << std::hex << current_offset
+                   << "[0x" << std::hex << var->delta()
                    << "]; public:\n";
+                current_offset += var->delta();
+            } else if (var->offset_is_explicit() && var->offset() > current_offset && !has_unknown_size_field) {
+                os << "private: char pad_" << std::hex << current_offset
+                   << "[0x" << std::hex << var->offset() - current_offset
+                   << "]; public:\n";
+                current_offset = var->offset();
+            } else if (var->offset_is_explicit() && var->offset() > current_offset) {
+                current_offset = var->offset();
             }
 
             if (var->is_bitfield()) {
-                generate_bitfield(os, offset);
+                // Emit bitfield group once per storage unit offset,
+                // using generate_bitfield() which handles gap padding.
+                if (emitted_bitfield_offsets.find(var->offset()) == emitted_bitfield_offsets.end()) {
+                    generate_bitfield(os, var->offset());
+                    emitted_bitfield_offsets.emplace(var->offset());
+                }
             } else {
                 var->generate(os);
             }
 
-            offset += var->size();
-            last_offset = offset;
-        } else {
-            ++offset;
+            if (var->size() == 0) {
+                has_unknown_size_field = true;
+            }
+            // Use end() (offset + size) with max to handle bitfields sharing a storage
+            // unit — multiple bitfields at the same offset won't over-advance past it.
+            auto var_end = var->offset() + var->size();
+            if (var_end > current_offset) {
+                current_offset = var_end;
+            }
         }
-    }
 
-    if (offset - last_offset > 0) {
-        os << "private: char pad_" << std::hex << last_offset << "[0x" << std::hex << offset - last_offset
-           << "]; public:\n";
+        // Trailing padding to fill explicit struct size.
+        // Only emit when all field sizes are known — if any field has size 0
+        // (TemplateParameter by value), we can't compute correct padding.
+        if (m_size > current_offset && !has_unknown_size_field) {
+            os << "private: char pad_" << std::hex << current_offset
+               << "[0x" << std::hex << m_size - current_offset
+               << "]; public:\n";
+        }
+    } else {
+        std::unordered_map<std::uintptr_t, Variable*> var_map{};
+
+        for (auto&& var : get_all<Variable>()) {
+            var_map[var->offset()] = var;
+        }
+
+        auto max_offset = size();
+        size_t offset = 0;
+
+        // Skip over the vtable.
+        if (has_any<VirtualFunction>()) {
+            offset = sizeof(uintptr_t);
+        }
+
+        // Start off where the parent ends.
+        if (!m_parents.empty()) {
+            offset = 0;
+
+            for (auto&& parent : m_parents) {
+                offset += parent->size();
+            }
+        }
+
+        auto last_offset = offset;
+
+        while (offset < max_offset) {
+            if (auto search = var_map.find(offset); search != var_map.end()) {
+                auto var = search->second;
+
+                // Skip variables where the user has not given us a valid size (forgot to set a type or the type is
+                // unfinished).
+                if (var->size() == 0) {
+                    ++offset;
+                    continue;
+                }
+
+                if (offset - last_offset > 0) {
+                    os << "private: char pad_" << std::hex << last_offset << "[0x" << std::hex << offset - last_offset
+                       << "]; public:\n";
+                }
+
+                if (var->is_bitfield()) {
+                    generate_bitfield(os, offset);
+                } else {
+                    var->generate(os);
+                }
+
+                offset += var->size();
+                last_offset = offset;
+            } else {
+                ++offset;
+            }
+        }
+
+        if (offset - last_offset > 0) {
+            os << "private: char pad_" << std::hex << last_offset << "[0x" << std::hex << offset - last_offset
+               << "]; public:\n";
+        }
     }
 
     if (has_any<Function>()) {
