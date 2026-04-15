@@ -753,8 +753,18 @@ template <> struct Action<VarDecl> {
     }
 };
 
+// Clear fn_ret_type when void is matched, since FnRetType actions from
+// failed FnDecl attempts (PEGTL backtracking) may have left it stale.
+template <> struct Action<FnVoidId> {
+    template <typename Input> static void apply(const Input& in, State& s) {
+        s.fn_ret_type = nullptr;
+    }
+};
+
 template <> struct Action<FnRetType> {
-    template <typename Input> static void apply(const Input& in, State& s) { s.fn_ret_type = s.cur_type; }
+    template <typename Input> static void apply(const Input& in, State& s) {
+        s.fn_ret_type = s.cur_type;
+    }
 };
 
 template <> struct Action<FnName> {
