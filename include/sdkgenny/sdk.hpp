@@ -125,19 +125,27 @@ protected:
             // Instantiated template types don't have their own header.
             // Include the template definition header and the instantiation's deps.
             if (auto inst = dynamic_cast<Struct*>(ty); inst && inst->is_template_instance()) {
-                includes.emplace(inst->template_source()->path() += m_header_extension);
+                // Skip self-includes: a self-referential template (e.g. Node<T>* inside Node)
+                // would resolve template_source() back to the struct being generated.
+                if (static_cast<Object*>(inst->template_source()) != static_cast<Object*>(obj)) {
+                    includes.emplace(inst->template_source()->path() += m_header_extension);
+                }
 
                 auto inst_deps = inst->dependencies();
                 for (auto&& dep : inst_deps.hard) {
                     if (auto dep_inst = dynamic_cast<Struct*>(dep); dep_inst && dep_inst->is_template_instance()) {
-                        includes.emplace(dep_inst->template_source()->path() += m_header_extension);
-                    } else {
+                        if (static_cast<Object*>(dep_inst->template_source()) != static_cast<Object*>(obj)) {
+                            includes.emplace(dep_inst->template_source()->path() += m_header_extension);
+                        }
+                    } else if (dep != obj) {
                         includes.emplace(dep->path() += m_header_extension);
                     }
                 }
                 for (auto&& dep : inst_deps.soft) {
                     if (auto dep_inst = dynamic_cast<Struct*>(dep); dep_inst && dep_inst->is_template_instance()) {
-                        includes.emplace(dep_inst->template_source()->path() += m_header_extension);
+                        if (static_cast<Object*>(dep_inst->template_source()) != static_cast<Object*>(obj)) {
+                            includes.emplace(dep_inst->template_source()->path() += m_header_extension);
+                        }
                     } else {
                         types_to_forward_decl.emplace(dep);
                     }
@@ -146,13 +154,14 @@ protected:
                 includes.emplace(ty->path() += m_header_extension);
             }
         }
-
         // Collect template instance soft deps into includes (not forward-declared).
         // Done before emitting includes so they're grouped and deduped.
         std::unordered_set<Type*> fwd_decl_filtered{};
         for (auto&& type : types_to_forward_decl) {
             if (auto inst = dynamic_cast<Struct*>(type); inst && inst->is_template_instance()) {
-                includes.emplace(inst->template_source()->path() += m_header_extension);
+                if (static_cast<Object*>(inst->template_source()) != static_cast<Object*>(obj)) {
+                    includes.emplace(inst->template_source()->path() += m_header_extension);
+                }
             } else {
                 fwd_decl_filtered.emplace(type);
             }
@@ -300,7 +309,9 @@ protected:
             // Mirror generate_header: template instances don't have their own header;
             // include the template definition header instead (Comment 19).
             if (auto inst = dynamic_cast<Struct*>(ty); inst && inst->is_template_instance()) {
-                includes.emplace(inst->template_source()->path() += m_header_extension);
+                if (static_cast<Object*>(inst->template_source()) != static_cast<Object*>(obj)) {
+                    includes.emplace(inst->template_source()->path() += m_header_extension);
+                }
             } else {
                 includes.emplace(ty->path() += m_header_extension);
             }

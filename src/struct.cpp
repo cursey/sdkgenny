@@ -107,7 +107,7 @@ static Type* substitute_type(Type* type, const std::unordered_map<TemplateParame
     return type;
 }
 
-Struct* Struct::instantiate(const std::vector<Type*>& args) const {
+Struct* Struct::instantiate(const std::vector<Type*>& args) {
     if (args.size() != m_template_params.size()) {
         return nullptr;
     }
@@ -238,7 +238,7 @@ Struct* Struct::instantiate(const std::vector<Type*>& args) const {
 
     // Instantiated structs don't generate their own header — the C++ template handles it
     inst->skip_generation(true);
-    inst->m_template_source = const_cast<Struct*>(this);
+    inst->m_template_source = this;
 
     return inst;
 }

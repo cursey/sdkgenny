@@ -45,7 +45,7 @@ public:
 
     // Creates a concrete struct by substituting template parameters with the given types.
     // The instantiated struct is added as a sibling in the same namespace/owner.
-    Struct* instantiate(const std::vector<Type*>& args) const;
+    Struct* instantiate(const std::vector<Type*>& args);
 
     // True if this struct was created by instantiate() from a template.
     bool is_template_instance() const { return m_template_source != nullptr; }
