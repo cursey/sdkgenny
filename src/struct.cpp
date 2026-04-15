@@ -504,6 +504,7 @@ void Struct::generate_internal(std::ostream& os) const {
         }
 
         bool has_unknown_size_field = false;
+        std::unordered_set<uintptr_t> emitted_bitfield_offsets{};
         for (auto&& var : get_all<Variable>()) {
             // Emit padding before variables with explicit @ offsets,
             // but only if we haven't seen a size-0 field — after one, we can't
@@ -517,7 +518,17 @@ void Struct::generate_internal(std::ostream& os) const {
                 current_offset = var->offset();
             }
 
-            var->generate(os);
+            if (var->is_bitfield()) {
+                // Emit bitfield group once per storage unit offset,
+                // using generate_bitfield() which handles gap padding.
+                if (emitted_bitfield_offsets.find(var->offset()) == emitted_bitfield_offsets.end()) {
+                    generate_bitfield(os, var->offset());
+                    emitted_bitfield_offsets.emplace(var->offset());
+                }
+            } else {
+                var->generate(os);
+            }
+
             if (var->size() == 0) {
                 has_unknown_size_field = true;
             }
