@@ -87,3 +87,9 @@ condition = "build-parser"
 type = "example"
 sources = ["examples/nestedstruct.cpp"]
 link-libraries = ["taocpp::pegtl"]
+
+[target.example_bigenum]
+condition = "build-parser"
+type = "example"
+sources = ["examples/bigenum.cpp"]
+link-libraries = ["taocpp::pegtl"]

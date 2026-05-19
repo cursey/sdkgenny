@@ -50,8 +50,7 @@ void Enum::generate_enums(std::ostream& os) const {
     detail::Indent _{os};
 
     for (auto&& [name, value] : m_values) {
-        if (!m_type || 1ull << (m_type->size() * 8) > value)
-            os << name << " = " << value << ",\n";
+        os << name << " = " << value << ",\n";
     }
 }
 } // namespace sdkgenny

@@ -163,7 +163,7 @@ struct State {
     std::string enum_type{};
     bool enum_class{};
     std::string enum_val_name{};
-    uint32_t enum_val{};
+    uint64_t enum_val{};
     std::vector<std::tuple<std::string, uint64_t>> enum_vals{};
 
     std::string struct_name{};
@@ -438,7 +438,7 @@ template <> struct Action<EnumExpr> {
 
 template <> struct Action<EnumVal> {
     template <typename Input> static void apply(const Input& in, State& s) {
-        s.enum_val = std::stoul(in.string(), nullptr, 0);
+        s.enum_val = std::stoull(in.string(), nullptr, 0);
     }
 };
 

@@ -435,3 +435,31 @@ if(SDKGENNY_BUILD_EXAMPLES) # build-examples
 
 	endif()
 endif()
+# Target: example_bigenum
+if(SDKGENNY_BUILD_EXAMPLES) # build-examples
+	if(SDKGENNY_BUILD_PARSER) # build-parser
+		set(example_bigenum_SOURCES
+			"examples/bigenum.cpp"
+			cmake.toml
+		)
+
+		add_executable(example_bigenum)
+
+		target_sources(example_bigenum PRIVATE ${example_bigenum_SOURCES})
+		source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${example_bigenum_SOURCES})
+
+		target_link_libraries(example_bigenum PRIVATE
+			sdkgenny
+		)
+
+		target_link_libraries(example_bigenum PRIVATE
+			taocpp::pegtl
+		)
+
+		get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
+		if(NOT CMKR_VS_STARTUP_PROJECT)
+			set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT example_bigenum)
+		endif()
+
+	endif()
+endif()
